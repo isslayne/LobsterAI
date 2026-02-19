@@ -642,6 +642,8 @@ export class DingTalkGateway extends EventEmitter {
     const oapiToken = await getOapiAccessToken(this.config.clientId, this.config.clientSecret);
 
     const uploadedMarkers: MediaMarker[] = [];
+    // 剥离媒体标记后的文本，用于最终发送（避免本地路径链接出现在钉钉消息中）
+    let cleanText = text;
 
     // 逐个上传媒体文件
     for (const marker of markers) {
@@ -657,6 +659,9 @@ export class DingTalkGateway extends EventEmitter {
 
       if (!result.success || !result.mediaId) {
         console.warn(`[DingTalk Gateway] Media upload failed: ${result.error}`);
+        // 上传失败：将标记替换为失败提示，保留文件名
+        const failLabel = marker.name ? `[文件 ${marker.name} 发送失败]` : '[文件发送失败]';
+        cleanText = cleanText.split(marker.originalMarker).join(failLabel);
         continue;
       }
 
@@ -678,17 +683,60 @@ export class DingTalkGateway extends EventEmitter {
           });
         } else {
           console.warn(`[DingTalk Gateway] Missing conversation info, cannot send media`);
+          // 无法发送文件气泡，保留原始标记在文本中
           continue;
         }
 
+        // 上传并发送成功：从文本中移除标记（文件已通过钉钉文件消息发送）
+        const sentLabel = marker.name ? `📎 ${marker.name}` : '';
+        cleanText = cleanText.split(marker.originalMarker).join(sentLabel);
         uploadedMarkers.push(marker);
       } catch (error: any) {
         console.error(`[DingTalk Gateway] Failed to send media: ${error.message}`);
+        const failLabel = marker.name ? `[文件 ${marker.name} 发送失败]` : '[文件发送失败]';
+        cleanText = cleanText.split(marker.originalMarker).join(failLabel);
       }
     }
 
-    // 发送完整的原始文本（保留 markdown 格式，不移除媒体标记）
-    await this.sendBySession(sessionWebhook, text, options);
+    // 发送剥离媒体标记后的文本（避免本地路径链接出现在钉钉消息中）
+    // 若文本全部是媒体标记则跳过，避免发送空消息
+    if (cleanText.trim()) {
+      await this.sendBySession(sessionWebhook, cleanText, options);
+    }
+  }
+
+  /**
+   * Card 模式专用：解析文本中的文件附件并上传发送为钉钉文件消息
+   * （Card 模式不走 sendWithMedia，文件需在 finalizeCard 后单独处理）
+   */
+  private async sendFileAttachments(
+    text: string,
+    options: {
+      conversationType: '1' | '2';
+      userId?: string;
+      openConversationId?: string;
+    }
+  ): Promise<void> {
+    if (!this.config) return;
+    const markers = parseMediaMarkers(text);
+    if (markers.length === 0) return;
+
+    try {
+      const oapiToken = await getOapiAccessToken(this.config.clientId, this.config.clientSecret);
+      for (const marker of markers) {
+        const mediaType = detectMediaType(marker.path);
+        const result = await uploadMediaToDingTalk(oapiToken, marker.path, mediaType, marker.name);
+        if (!result.success || !result.mediaId) {
+          this.log(`[DingTalk] 文件附件上传失败: ${result.error}`);
+          continue;
+        }
+        const mediaMsg = this.buildMediaMessage(mediaType, result.mediaId, marker.name);
+        await this.sendMediaViaNewApi(mediaMsg, options);
+        this.log(`[DingTalk] 文件附件已发送: ${marker.name || marker.path}`);
+      }
+    } catch (err: any) {
+      this.log(`[DingTalk] 发送文件附件出错: ${err.message}`);
+    }
   }
 
   /**
@@ -880,6 +928,12 @@ export class DingTalkGateway extends EventEmitter {
             await lastStreamingCall.catch(() => {});
             await finalizeCard(token, outTrackId, text, cardTemplateKey);
             this.status.lastOutboundAt = Date.now();
+            // Card 模式不走 sendWithMedia，需额外发送文件附件
+            await this.sendFileAttachments(text, {
+              conversationType: data.conversationType as '1' | '2',
+              userId: senderId,
+              openConversationId: data.conversationId,
+            });
           };
 
           // 流式更新回调
