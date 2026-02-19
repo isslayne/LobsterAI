@@ -175,10 +175,10 @@ export function getMimeType(filePath: string): string {
 /**
  * 获取/创建钉钉入站媒体存储目录
  */
-export function getDingTalkMediaDir(): string {
+export function getDingTalkMediaDir(baseDir?: string): string {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { app } = require('electron');
-  const dir = path.join(app.getPath('userData'), 'dingtalk-inbound');
+  const dir = path.join(baseDir || app.getPath('userData'), 'dingtalk-inbound');
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }

@@ -5,10 +5,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { SignalIcon, XMarkIcon, CheckCircleIcon, XCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { SignalIcon, XMarkIcon, CheckCircleIcon, XCircleIcon, ExclamationTriangleIcon, FolderOpenIcon } from '@heroicons/react/24/outline';
 import { RootState } from '../../store';
 import { imService } from '../../services/im';
-import { setDingTalkConfig, setFeishuConfig, setTelegramConfig, setDiscordConfig, clearError } from '../../store/slices/imSlice';
+import { setDingTalkConfig, setFeishuConfig, setTelegramConfig, setDiscordConfig, setIMSettings, clearError } from '../../store/slices/imSlice';
 import { i18nService } from '../../services/i18n';
 import type { IMPlatform, IMConnectivityCheck, IMConnectivityTestResult, IMGatewayConfig } from '../../types/im';
 import { getVisibleIMPlatforms } from '../../utils/regionFilter';
@@ -82,6 +82,20 @@ const IMSettings: React.FC = () => {
   // Save config on blur
   const handleSaveConfig = async () => {
     await imService.updateConfig(config);
+  };
+
+  // Handle media directory selection
+  const handleSelectMediaDir = async () => {
+    const result = await window.electron.dialog.selectDirectory();
+    if (result.success && result.path) {
+      dispatch(setIMSettings({ mediaDir: result.path }));
+      await imService.updateConfig({ settings: { ...config.settings, mediaDir: result.path } });
+    }
+  };
+
+  const handleClearMediaDir = async () => {
+    dispatch(setIMSettings({ mediaDir: '' }));
+    await imService.updateConfig({ settings: { ...config.settings, mediaDir: '' } });
   };
 
   const getCheckTitle = (code: IMConnectivityCheck['code']): string => {
@@ -343,6 +357,44 @@ const IMSettings: React.FC = () => {
                 : i18nService.t('disconnected')}
           </div>
         </div>
+
+        {/* Media Directory - shown for DingTalk and Telegram only */}
+        {(activePlatform === 'dingtalk' || activePlatform === 'telegram') && (
+          <div className="space-y-1.5 pb-3 border-b dark:border-claude-darkBorder/60 border-claude-border/60">
+            <label className="block text-xs font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
+              媒体文件保存目录
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0 rounded-lg dark:bg-claude-darkSurface/80 bg-claude-surface/80 dark:border-claude-darkBorder/60 border-claude-border/60 border px-3 py-2 text-sm dark:text-claude-darkText text-claude-text truncate">
+                {config.settings?.mediaDir || (
+                  <span className="dark:text-claude-darkTextSecondary text-claude-textSecondary">
+                    默认目录（{activePlatform === 'dingtalk' ? 'dingtalk-inbound' : 'telegram-inbound'}）
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleSelectMediaDir}
+                className="flex-shrink-0 inline-flex items-center px-3 py-2 text-xs font-medium rounded-lg border dark:border-claude-darkBorder border-claude-border dark:text-claude-darkText text-claude-text dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover transition-colors"
+              >
+                <FolderOpenIcon className="h-3.5 w-3.5 mr-1.5" />
+                浏览
+              </button>
+              {config.settings?.mediaDir && (
+                <button
+                  type="button"
+                  onClick={handleClearMediaDir}
+                  className="flex-shrink-0 inline-flex items-center px-3 py-2 text-xs font-medium rounded-lg border dark:border-claude-darkBorder border-claude-border dark:text-claude-darkTextSecondary text-claude-textSecondary dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover transition-colors"
+                >
+                  重置
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] dark:text-claude-darkTextSecondary text-claude-textSecondary">
+              收到的图片等媒体文件将保存到所选目录下的 {activePlatform === 'dingtalk' ? 'dingtalk-inbound/' : 'telegram-inbound/'} 子文件夹
+            </p>
+          </div>
+        )}
 
         {/* DingTalk Settings */}
         {activePlatform === 'dingtalk' && (

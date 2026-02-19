@@ -81,6 +81,9 @@ export class TelegramGateway extends EventEmitter {
   // 定期清理任务
   private cleanupInterval: NodeJS.Timeout | null = null;
 
+  // Media directory (optional custom path)
+  private mediaDir?: string;
+
   constructor() {
     super();
   }
@@ -90,6 +93,13 @@ export class TelegramGateway extends EventEmitter {
    */
   getStatus(): TelegramGatewayStatus {
     return { ...this.status };
+  }
+
+  /**
+   * Set media save directory
+   */
+  setMediaDir(dir?: string): void {
+    this.mediaDir = dir || undefined;
   }
 
   /**
@@ -194,11 +204,11 @@ export class TelegramGateway extends EventEmitter {
       };
 
       // 启动时清理旧媒体文件
-      cleanupOldMediaFiles(7);
+      cleanupOldMediaFiles(7, this.mediaDir);
 
       // 设置定期清理任务（每 24 小时）
       this.cleanupInterval = setInterval(() => {
-        cleanupOldMediaFiles(7);
+        cleanupOldMediaFiles(7, this.mediaDir);
       }, 24 * 60 * 60 * 1000);
 
       console.log(`[Telegram Gateway] Connected successfully as @${botInfo.username}`);
@@ -302,7 +312,7 @@ export class TelegramGateway extends EventEmitter {
       const textContent = message.text || message.caption || '';
 
       // Extract media attachments
-      const attachments = await extractMediaFromMessage(ctx);
+      const attachments = await extractMediaFromMessage(ctx, this.mediaDir);
 
       // Skip if no content and no attachments (unsupported message type: sticker, poll, location, etc.)
       if (!textContent && attachments.length === 0) {

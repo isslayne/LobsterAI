@@ -53,6 +53,9 @@ export class DingTalkGateway extends EventEmitter {
   private isStopping = false;
   private lastMessageTime = 0;
 
+  // Media directory (optional custom path)
+  private mediaDir?: string;
+
   // Message deduplication (prevent duplicate processing on Stream SDK retransmit)
   private processedMsgIds = new Map<string, number>();
   private readonly MSG_DEDUP_TTL = 5 * 60 * 1000; // 5 minutes
@@ -71,6 +74,13 @@ export class DingTalkGateway extends EventEmitter {
    */
   getStatus(): DingTalkGatewayStatus {
     return { ...this.status };
+  }
+
+  /**
+   * Set media save directory
+   */
+  setMediaDir(dir?: string): void {
+    this.mediaDir = dir || undefined;
   }
 
   /**
@@ -731,7 +741,7 @@ export class DingTalkGateway extends EventEmitter {
     let attachments: IMMediaAttachment[] | undefined;
     if (content.mediaPath && content.mediaType === 'image') {
       try {
-        const saveDir = getDingTalkMediaDir();
+        const saveDir = getDingTalkMediaDir(this.mediaDir);
         const fileName = (content.text && content.text !== '[图片]')
           ? content.text
           : `${Date.now()}.jpg`;
@@ -758,7 +768,7 @@ export class DingTalkGateway extends EventEmitter {
     // Download richText inline images
     if (content.mediaPaths && content.mediaPaths.length > 0) {
       try {
-        const saveDir = getDingTalkMediaDir();
+        const saveDir = getDingTalkMediaDir(this.mediaDir);
         const results = await Promise.all(
           content.mediaPaths.map(async (code, idx) => {
             const fileName = `${Date.now()}_${idx}.jpg`;

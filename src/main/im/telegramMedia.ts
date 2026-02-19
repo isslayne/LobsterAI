@@ -15,8 +15,8 @@ const INBOUND_DIR = 'telegram-inbound';
 /**
  * 获取媒体存储目录
  */
-export function getTelegramMediaDir(): string {
-  const userDataPath = app.getPath('userData');
+export function getTelegramMediaDir(baseDir?: string): string {
+  const userDataPath = baseDir || app.getPath('userData');
   const mediaDir = path.join(userDataPath, INBOUND_DIR);
 
   if (!fs.existsSync(mediaDir)) {
@@ -73,7 +73,8 @@ export async function downloadTelegramFile(
   ctx: Context,
   fileId: string,
   mimeType: string,
-  originalFileName?: string
+  originalFileName?: string,
+  baseDir?: string
 ): Promise<{ localPath: string; fileSize: number } | null> {
   try {
     // 1. 获取文件信息
@@ -102,7 +103,7 @@ export async function downloadTelegramFile(
     const fileName = generateFileName(fileId, extension);
 
     // 5. 下载文件
-    const mediaDir = getTelegramMediaDir();
+    const mediaDir = getTelegramMediaDir(baseDir);
     const localPath = path.join(mediaDir, fileName);
 
     const response = await fetch(downloadUrl);
@@ -129,7 +130,8 @@ export async function downloadTelegramFile(
  * 从 Telegram 消息提取媒体附件
  */
 export async function extractMediaFromMessage(
-  ctx: Context
+  ctx: Context,
+  baseDir?: string
 ): Promise<IMMediaAttachment[]> {
   const msg = ctx.message;
   if (!msg) return [];
@@ -139,7 +141,7 @@ export async function extractMediaFromMessage(
   // 1. 照片 - 取最高分辨率
   if (msg.photo && msg.photo.length > 0) {
     const photo = msg.photo[msg.photo.length - 1];  // 最后一个是最大的
-    const result = await downloadTelegramFile(ctx, photo.file_id, 'image/jpeg');
+    const result = await downloadTelegramFile(ctx, photo.file_id, 'image/jpeg', undefined, baseDir);
     if (result) {
       attachments.push({
         type: 'image',
@@ -156,7 +158,7 @@ export async function extractMediaFromMessage(
   if (msg.video) {
     const video = msg.video;
     const mimeType = video.mime_type || 'video/mp4';
-    const result = await downloadTelegramFile(ctx, video.file_id, mimeType, video.file_name);
+    const result = await downloadTelegramFile(ctx, video.file_id, mimeType, video.file_name, baseDir);
     if (result) {
       attachments.push({
         type: 'video',
@@ -174,7 +176,7 @@ export async function extractMediaFromMessage(
   // 3. 圆形视频 (video_note)
   if (msg.video_note) {
     const videoNote = msg.video_note;
-    const result = await downloadTelegramFile(ctx, videoNote.file_id, 'video/mp4');
+    const result = await downloadTelegramFile(ctx, videoNote.file_id, 'video/mp4', undefined, baseDir);
     if (result) {
       attachments.push({
         type: 'video',
@@ -192,7 +194,7 @@ export async function extractMediaFromMessage(
   if (msg.audio) {
     const audio = msg.audio;
     const mimeType = audio.mime_type || 'audio/mpeg';
-    const result = await downloadTelegramFile(ctx, audio.file_id, mimeType, audio.file_name);
+    const result = await downloadTelegramFile(ctx, audio.file_id, mimeType, audio.file_name, baseDir);
     if (result) {
       attachments.push({
         type: 'audio',
@@ -209,7 +211,7 @@ export async function extractMediaFromMessage(
   if (msg.voice) {
     const voice = msg.voice;
     const mimeType = voice.mime_type || 'audio/ogg';
-    const result = await downloadTelegramFile(ctx, voice.file_id, mimeType);
+    const result = await downloadTelegramFile(ctx, voice.file_id, mimeType, undefined, baseDir);
     if (result) {
       attachments.push({
         type: 'voice',
@@ -225,7 +227,7 @@ export async function extractMediaFromMessage(
   if (msg.document) {
     const doc = msg.document;
     const mimeType = doc.mime_type || 'application/octet-stream';
-    const result = await downloadTelegramFile(ctx, doc.file_id, mimeType, doc.file_name);
+    const result = await downloadTelegramFile(ctx, doc.file_id, mimeType, doc.file_name, baseDir);
     if (result) {
       attachments.push({
         type: 'document',
@@ -242,7 +244,7 @@ export async function extractMediaFromMessage(
     const sticker = msg.sticker;
     // 只处理静态贴纸，跳过动画贴纸 (TGS) 和视频贴纸 (WEBM)
     if (!sticker.is_animated && !sticker.is_video) {
-      const result = await downloadTelegramFile(ctx, sticker.file_id, 'image/webp');
+      const result = await downloadTelegramFile(ctx, sticker.file_id, 'image/webp', undefined, baseDir);
       if (result) {
         attachments.push({
           type: 'sticker',
@@ -265,8 +267,8 @@ export async function extractMediaFromMessage(
  * 清理过期的媒体文件
  * @param maxAgeDays 最大保留天数，默认 7 天
  */
-export function cleanupOldMediaFiles(maxAgeDays: number = 7): void {
-  const mediaDir = getTelegramMediaDir();
+export function cleanupOldMediaFiles(maxAgeDays: number = 7, baseDir?: string): void {
+  const mediaDir = getTelegramMediaDir(baseDir);
   const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
   const now = Date.now();
 

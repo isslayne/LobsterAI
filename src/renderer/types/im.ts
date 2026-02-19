@@ -97,6 +97,7 @@ export interface IMGatewayConfig {
 export interface IMSettings {
   systemPrompt?: string;
   skillsEnabled: boolean;
+  mediaDir?: string;
 }
 
 export interface IMGatewayStatus {

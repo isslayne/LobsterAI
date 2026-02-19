@@ -280,6 +280,12 @@ export class IMGatewayManager extends EventEmitter {
     // Update chat handler if settings changed
     if (config.settings) {
       this.updateChatHandler();
+      // Propagate mediaDir changes to running gateways immediately
+      if (config.settings.mediaDir !== undefined) {
+        const dir = config.settings.mediaDir || undefined;
+        this.dingtalkGateway.setMediaDir(dir);
+        this.telegramGateway.setMediaDir(dir);
+      }
     }
   }
 
@@ -499,10 +505,12 @@ export class IMGatewayManager extends EventEmitter {
 
     if (platform === 'dingtalk') {
       await this.dingtalkGateway.start(config.dingtalk);
+      this.dingtalkGateway.setMediaDir(config.settings?.mediaDir);
     } else if (platform === 'feishu') {
       await this.feishuGateway.start(config.feishu);
     } else if (platform === 'telegram') {
       await this.telegramGateway.start(config.telegram);
+      this.telegramGateway.setMediaDir(config.settings?.mediaDir);
     } else if (platform === 'discord') {
       await this.discordGateway.start(config.discord);
     }
