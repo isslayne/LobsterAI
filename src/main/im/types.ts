@@ -33,6 +33,7 @@ export interface DingTalkInboundMessage {
   content?: {
     downloadCode?: string;
     fileName?: string;
+    pictureName?: string;
     recognition?: string;
     richText?: Array<{ text?: string }>;
   };

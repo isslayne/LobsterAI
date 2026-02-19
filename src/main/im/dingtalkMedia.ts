@@ -8,6 +8,7 @@ import * as path from 'path';
 import FormData from 'form-data';
 
 const DINGTALK_OAPI = 'https://oapi.dingtalk.com';
+const DINGTALK_API_V2 = 'https://api.dingtalk.com/v1.0';
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 // 旧版 oapi access_token 缓存
@@ -169,6 +170,59 @@ export function getMimeType(filePath: string): string {
     '.aac': 'audio/aac',
   };
   return mimeMap[ext] || 'application/octet-stream';
+}
+
+/**
+ * 获取/创建钉钉入站媒体存储目录
+ */
+export function getDingTalkMediaDir(): string {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { app } = require('electron');
+  const dir = path.join(app.getPath('userData'), 'dingtalk-inbound');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
+
+/**
+ * 使用 downloadCode 从钉钉下载媒体文件到本地
+ */
+export async function downloadDingTalkMedia(
+  accessToken: string,
+  robotCode: string,
+  downloadCode: string,
+  fileName: string,
+  saveDir: string
+): Promise<{ localPath: string } | null> {
+  console.log(`[DingTalk Media] 开始下载媒体文件:`, JSON.stringify({ downloadCode: downloadCode.slice(0, 20) + '...', fileName }));
+
+  try {
+    // 1. 调用 DingTalk API 获取临时下载 URL
+    const res = await axios.post<{ downloadUrl: string }>(
+      `${DINGTALK_API_V2}/robot/messageFiles/download`,
+      { downloadCode, robotCode },
+      { headers: { 'x-acs-dingtalk-access-token': accessToken } }
+    );
+
+    const downloadUrl = res.data?.downloadUrl;
+    if (!downloadUrl) {
+      console.error(`[DingTalk Media] 未获取到 downloadUrl`, JSON.stringify(res.data));
+      return null;
+    }
+
+    // 2. 下载文件到本地
+    const safeName = `${Date.now()}_${fileName}`;
+    const localPath = path.join(saveDir, safeName);
+    const fileRes = await axios.get<ArrayBuffer>(downloadUrl, { responseType: 'arraybuffer', timeout: 30000 });
+    fs.writeFileSync(localPath, Buffer.from(fileRes.data));
+
+    console.log(`[DingTalk Media] 下载成功: ${localPath}`);
+    return { localPath };
+  } catch (error: any) {
+    console.error(`[DingTalk Media] 下载失败:`, error.message, error.response?.data);
+    return null;
+  }
 }
 
 /**

@@ -13,9 +13,10 @@ import {
   DingTalkMediaMessage,
   MediaMarker,
   IMMessage,
+  IMMediaAttachment,
   DEFAULT_DINGTALK_STATUS,
 } from './types';
-import { uploadMediaToDingTalk, detectMediaType, getOapiAccessToken } from './dingtalkMedia';
+import { uploadMediaToDingTalk, detectMediaType, getOapiAccessToken, downloadDingTalkMedia, getDingTalkMediaDir } from './dingtalkMedia';
 import { parseMediaMarkers } from './dingtalkMediaParser';
 import { createUtf8JsonBody, JSON_UTF8_CONTENT_TYPE, stringifyAsciiJson } from './jsonEncoding';
 
@@ -428,6 +429,15 @@ export class DingTalkGateway extends EventEmitter {
       };
     }
 
+    if (msgtype === 'picture') {
+      return {
+        text: data.content?.pictureName || '[图片]',
+        mediaPath: data.content?.downloadCode,
+        mediaType: 'image',
+        messageType: 'picture',
+      };
+    }
+
     return { text: data.text?.content?.trim() || `[${msgtype}消息]`, messageType: msgtype };
   }
 
@@ -681,6 +691,34 @@ export class DingTalkGateway extends EventEmitter {
       mediaType: content.mediaType,
     }, null, 2));
 
+    // Download image attachment if present
+    let attachments: IMMediaAttachment[] | undefined;
+    if (content.mediaPath && content.mediaType === 'image') {
+      try {
+        const saveDir = getDingTalkMediaDir();
+        const fileName = (content.text && content.text !== '[图片]')
+          ? content.text
+          : `${Date.now()}.jpg`;
+        const result = await downloadDingTalkMedia(
+          await this.getAccessToken(),
+          this.config.clientId,
+          content.mediaPath,
+          fileName,
+          saveDir
+        );
+        if (result) {
+          attachments = [{
+            type: 'image',
+            localPath: result.localPath,
+            mimeType: 'image/jpeg',
+            fileName,
+          }];
+        }
+      } catch (e: any) {
+        this.log(`[DingTalk] 下载图片失败: ${e.message}`);
+      }
+    }
+
     // Create IMMessage
     const message: IMMessage = {
       platform: 'dingtalk',
@@ -691,6 +729,7 @@ export class DingTalkGateway extends EventEmitter {
       content: content.text,
       chatType: isDirect ? 'direct' : 'group',
       timestamp: data.createAt || Date.now(),
+      attachments,
     };
     this.status.lastInboundAt = Date.now();
 
