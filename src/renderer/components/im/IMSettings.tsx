@@ -60,7 +60,7 @@ const IMSettings: React.FC = () => {
   }, []);
 
   // Handle DingTalk config change
-  const handleDingTalkChange = (field: 'clientId' | 'clientSecret', value: string) => {
+  const handleDingTalkChange = (field: 'clientId' | 'clientSecret' | 'messageType' | 'cardTemplateId', value: string) => {
     dispatch(setDingTalkConfig({ [field]: value }));
   };
 
@@ -428,6 +428,57 @@ const IMSettings: React.FC = () => {
                 placeholder="••••••••••••"
               />
             </div>
+
+            {/* Message Type */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
+                回复方式
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { handleDingTalkChange('messageType', 'markdown'); void imService.updateConfig({ dingtalk: { ...config.dingtalk, messageType: 'markdown' } }); }}
+                  className={`flex-1 px-3 py-2 text-xs rounded-lg border transition-colors ${
+                    config.dingtalk.messageType !== 'card'
+                      ? 'border-claude-accent bg-claude-accent/10 dark:text-claude-accent text-claude-accent font-medium'
+                      : 'dark:border-claude-darkBorder/60 border-claude-border/60 dark:text-claude-darkTextSecondary text-claude-textSecondary hover:border-claude-accent/50'
+                  }`}
+                >
+                  Markdown 消息
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handleDingTalkChange('messageType', 'card'); void imService.updateConfig({ dingtalk: { ...config.dingtalk, messageType: 'card' } }); }}
+                  className={`flex-1 px-3 py-2 text-xs rounded-lg border transition-colors ${
+                    config.dingtalk.messageType === 'card'
+                      ? 'border-claude-accent bg-claude-accent/10 dark:text-claude-accent text-claude-accent font-medium'
+                      : 'dark:border-claude-darkBorder/60 border-claude-border/60 dark:text-claude-darkTextSecondary text-claude-textSecondary hover:border-claude-accent/50'
+                  }`}
+                >
+                  AI 卡片（打字机效果）
+                </button>
+              </div>
+            </div>
+
+            {/* Card Template ID (only shown in card mode) */}
+            {config.dingtalk.messageType === 'card' && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
+                  卡片模板 ID
+                </label>
+                <input
+                  type="text"
+                  value={config.dingtalk.cardTemplateId || ''}
+                  onChange={(e) => handleDingTalkChange('cardTemplateId', e.target.value)}
+                  onBlur={handleSaveConfig}
+                  className="block w-full rounded-lg dark:bg-claude-darkSurface/80 bg-claude-surface/80 dark:border-claude-darkBorder/60 border-claude-border/60 border focus:border-claude-accent focus:ring-1 focus:ring-claude-accent/30 dark:text-claude-darkText text-claude-text px-3 py-2 text-sm transition-colors"
+                  placeholder="382e4302-551d-4880-bf29-a30acfab2e71.schema（默认公开模板）"
+                />
+                <p className="text-xs dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/70">
+                  留空则使用公开 AI 卡片模板。需在钉钉开放平台申请 Card.Streaming.Write 和 Card.Instance.Write 权限。
+                </p>
+              </div>
+            )}
 
             <div className="pt-1">
               {renderConnectivityTestButton('dingtalk')}

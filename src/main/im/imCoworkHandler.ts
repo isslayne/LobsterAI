@@ -17,6 +17,8 @@ interface MessageAccumulator {
   resolve: (text: string) => void;
   reject: (error: Error) => void;
   timeoutId?: NodeJS.Timeout;
+  onStreamingUpdate?: (content: string) => Promise<void>;
+  lastStreamSentAt?: number;
 }
 
 interface PendingIMPermission {
@@ -82,14 +84,17 @@ export class IMCoworkHandler extends EventEmitter {
   /**
    * Process an incoming IM message using CoworkRunner
    */
-  async processMessage(message: IMMessage): Promise<string> {
+  async processMessage(
+    message: IMMessage,
+    onStreamingUpdate?: (content: string) => Promise<void>
+  ): Promise<string> {
     const pendingPermissionReply = await this.handlePendingPermissionReply(message);
     if (pendingPermissionReply !== null) {
       return pendingPermissionReply;
     }
 
     try {
-      return await this.processMessageInternal(message, false);
+      return await this.processMessageInternal(message, false, onStreamingUpdate);
     } catch (error) {
       if (!this.isSessionNotFoundError(error)) {
         throw error;
@@ -98,11 +103,15 @@ export class IMCoworkHandler extends EventEmitter {
       console.warn(
         `[IMCoworkHandler] Cowork session mapping is stale for ${message.platform}:${message.conversationId}, recreating session`
       );
-      return this.processMessageInternal(message, true);
+      return this.processMessageInternal(message, true, onStreamingUpdate);
     }
   }
 
-  private async processMessageInternal(message: IMMessage, forceNewSession: boolean): Promise<string> {
+  private async processMessageInternal(
+    message: IMMessage,
+    forceNewSession: boolean,
+    onStreamingUpdate?: (content: string) => Promise<void>
+  ): Promise<string> {
     const coworkSessionId = await this.getOrCreateCoworkSession(
       message.conversationId,
       message.platform,
@@ -113,7 +122,7 @@ export class IMCoworkHandler extends EventEmitter {
       platform: message.platform,
     });
 
-    const responsePromise = this.createAccumulatorPromise(coworkSessionId);
+    const responsePromise = this.createAccumulatorPromise(coworkSessionId, onStreamingUpdate);
 
     // Start or continue session
     const isActive = this.coworkRunner.isSessionActive(coworkSessionId);
@@ -303,6 +312,14 @@ export class IMCoworkHandler extends EventEmitter {
       const existingIndex = accumulator.messages.findIndex(m => m.id === messageId);
       if (existingIndex >= 0) {
         accumulator.messages[existingIndex].content = content;
+        // 节流调用流式回调（800ms 间隔）
+        if (accumulator.onStreamingUpdate) {
+          const now = Date.now();
+          if (!accumulator.lastStreamSentAt || now - accumulator.lastStreamSentAt >= 800) {
+            accumulator.lastStreamSentAt = now;
+            accumulator.onStreamingUpdate(content).catch(() => {});
+          }
+        }
       }
     }
   }
@@ -311,7 +328,10 @@ export class IMCoworkHandler extends EventEmitter {
     return `${platform}:${conversationId}`;
   }
 
-  private createAccumulatorPromise(sessionId: string): Promise<string> {
+  private createAccumulatorPromise(
+    sessionId: string,
+    onStreamingUpdate?: (content: string) => Promise<void>
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       const existingAccumulator = this.messageAccumulators.get(sessionId);
       if (existingAccumulator) {
@@ -338,6 +358,7 @@ export class IMCoworkHandler extends EventEmitter {
         resolve,
         reject,
         timeoutId,
+        onStreamingUpdate,
       });
     });
   }

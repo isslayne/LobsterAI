@@ -14,8 +14,17 @@ import {
   MediaMarker,
   IMMessage,
   IMMediaAttachment,
+  IMStreamCallbacks,
   DEFAULT_DINGTALK_STATUS,
 } from './types';
+import {
+  generateOutTrackId,
+  createCardInstance,
+  deliverCardInstance,
+  startCardInputing,
+  updateCardStreaming,
+  finalizeCard,
+} from './dingtalkAICard';
 import { uploadMediaToDingTalk, detectMediaType, getOapiAccessToken, downloadDingTalkMedia, getDingTalkMediaDir } from './dingtalkMedia';
 import { parseMediaMarkers } from './dingtalkMediaParser';
 import { createUtf8JsonBody, JSON_UTF8_CONTENT_TYPE, stringifyAsciiJson } from './jsonEncoding';
@@ -40,7 +49,7 @@ export class DingTalkGateway extends EventEmitter {
   private config: DingTalkConfig | null = null;
   private savedConfig: DingTalkConfig | null = null; // Saved config for reconnection
   private status: DingTalkGatewayStatus = { ...DEFAULT_DINGTALK_STATUS };
-  private onMessageCallback?: (message: IMMessage, replyFn: (text: string) => Promise<void>) => Promise<void>;
+  private onMessageCallback?: (message: IMMessage, replyFn: (text: string) => Promise<void>, streamCallbacks?: IMStreamCallbacks) => Promise<void>;
   private lastConversation: { conversationType: '1' | '2'; userId?: string; openConversationId?: string; sessionWebhook: string } | null = null;
   private log: (...args: any[]) => void = () => {};
 
@@ -838,8 +847,70 @@ export class DingTalkGateway extends EventEmitter {
 
     // Call message callback if set
     if (this.onMessageCallback) {
+      // AI 卡片模式：创建并投递卡片，流式更新，最终化
+      let activeReplyFn = replyFn;
+      let streamCallbacks: IMStreamCallbacks | undefined;
+
+      if (this.config?.messageType === 'card') {
+        try {
+          const token = await this.getAccessToken();
+          const outTrackId = generateOutTrackId();
+          const cardTemplateId = this.config.cardTemplateId || undefined;
+          const robotCode = this.config.robotCode || this.config.clientId || '';
+
+          await createCardInstance(token, outTrackId, cardTemplateId);
+          await deliverCardInstance(
+            token, outTrackId, robotCode,
+            data.conversationType as '1' | '2',
+            senderId, data.conversationId
+          );
+
+          // Promise gate：确保 startCardInputing 只调用一次，且在首次 streaming 前立刻调用
+          // （不在此处提前调用，避免 INPUTING 状态超时）
+          let inputingPromise: Promise<void> | null = null;
+          // 串行链：确保 updateCardStreaming 调用不并发、不乱序
+          let lastStreamingCall: Promise<void> = Promise.resolve();
+          // finalize 标志：防止 isFinalize:true 发送后仍有晚到的 streaming update
+          let finalizing = false;
+
+          // 替换 replyFn：排干所有 pending streaming 后再最终化
+          activeReplyFn = async (text: string) => {
+            finalizing = true;
+            await lastStreamingCall.catch(() => {});
+            await finalizeCard(token, outTrackId, text);
+            this.status.lastOutboundAt = Date.now();
+          };
+
+          // 流式更新回调
+          streamCallbacks = {
+            onStreamingUpdate: async (content: string) => {
+              // finalize 已开始则丢弃（800ms 节流可能有晚到帧）
+              if (finalizing) return;
+
+              // 首次调用时才发 INPUTING（Promise gate，防重复且防过早）
+              if (inputingPromise === null) {
+                inputingPromise = startCardInputing(token, outTrackId).catch(() => {});
+              }
+              await inputingPromise;
+
+              // 串行化：等上一次 streaming 完成再发新的（防乱序）
+              const prev = lastStreamingCall;
+              lastStreamingCall = prev
+                .then(() => updateCardStreaming(token, outTrackId, content))
+                .catch(() => {});
+              await lastStreamingCall;
+            },
+          };
+
+          this.log(`[DingTalk] AI 卡片已创建并投递: ${outTrackId}`);
+        } catch (err: any) {
+          this.log(`[DingTalk] AI 卡片创建失败，降级为 Markdown: ${err.message}`);
+          // 降级：沿用原有 replyFn，streamCallbacks 保持 undefined
+        }
+      }
+
       try {
-        await this.onMessageCallback(message, replyFn);
+        await this.onMessageCallback(message, activeReplyFn, streamCallbacks);
       } catch (error: any) {
         console.error(`[DingTalk Gateway] Error in message callback: ${error.message}`);
         await replyFn(`❌ 处理消息时出错: ${error.message}`);

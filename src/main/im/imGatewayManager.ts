@@ -184,7 +184,8 @@ export class IMGatewayManager extends EventEmitter {
   private setupMessageHandlers(): void {
     const messageHandler = async (
       message: IMMessage,
-      replyFn: (text: string) => Promise<void>
+      replyFn: (text: string) => Promise<void>,
+      streamCallbacks?: { onStreamingUpdate?: (content: string) => Promise<void> }
     ): Promise<void> => {
       try {
         let response: string;
@@ -192,7 +193,7 @@ export class IMGatewayManager extends EventEmitter {
         // Always use Cowork mode if handler is available
         if (this.coworkHandler) {
           console.log('[IMGatewayManager] Using Cowork mode for message processing');
-          response = await this.coworkHandler.processMessage(message);
+          response = await this.coworkHandler.processMessage(message, streamCallbacks?.onStreamingUpdate);
         } else {
           // Fallback to regular chat handler
           if (!this.chatHandler) {

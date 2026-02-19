@@ -156,6 +156,10 @@ export interface IMMediaAttachment {
   duration?: number;          // 音视频时长（秒）
 }
 
+export interface IMStreamCallbacks {
+  onStreamingUpdate: (content: string) => Promise<void>;
+}
+
 export interface IMMessage {
   platform: IMPlatform;
   messageId: string;
