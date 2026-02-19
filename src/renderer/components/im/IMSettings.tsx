@@ -60,7 +60,7 @@ const IMSettings: React.FC = () => {
   }, []);
 
   // Handle DingTalk config change
-  const handleDingTalkChange = (field: 'clientId' | 'clientSecret' | 'messageType' | 'cardTemplateId', value: string) => {
+  const handleDingTalkChange = (field: 'clientId' | 'clientSecret' | 'messageType' | 'cardTemplateId' | 'cardTemplateKey', value: string) => {
     dispatch(setDingTalkConfig({ [field]: value }));
   };
 
@@ -476,6 +476,26 @@ const IMSettings: React.FC = () => {
                 />
                 <p className="text-xs dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/70">
                   留空则使用公开 AI 卡片模板。需在钉钉开放平台申请 Card.Streaming.Write 和 Card.Instance.Write 权限。
+                </p>
+              </div>
+            )}
+
+            {/* Card Template Key (only shown in card mode) */}
+            {config.dingtalk.messageType === 'card' && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium dark:text-claude-darkTextSecondary text-claude-textSecondary">
+                  卡片模板变量名
+                </label>
+                <input
+                  type="text"
+                  value={config.dingtalk.cardTemplateKey || ''}
+                  onChange={(e) => handleDingTalkChange('cardTemplateKey', e.target.value)}
+                  onBlur={handleSaveConfig}
+                  className="block w-full rounded-lg dark:bg-claude-darkSurface/80 bg-claude-surface/80 dark:border-claude-darkBorder/60 border-claude-border/60 border focus:border-claude-accent focus:ring-1 focus:ring-claude-accent/30 dark:text-claude-darkText text-claude-text px-3 py-2 text-sm transition-colors"
+                  placeholder="msgContent（默认）"
+                />
+                <p className="text-xs dark:text-claude-darkTextSecondary/70 text-claude-textSecondary/70">
+                  卡片模板中绑定流式内容的变量名，默认 msgContent。使用自定义模板时按模板中的实际变量名填写。
                 </p>
               </div>
             )}

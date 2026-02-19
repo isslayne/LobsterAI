@@ -856,6 +856,7 @@ export class DingTalkGateway extends EventEmitter {
           const token = await this.getAccessToken();
           const outTrackId = generateOutTrackId();
           const cardTemplateId = this.config.cardTemplateId || undefined;
+          const cardTemplateKey = this.config.cardTemplateKey || 'msgContent';
           const robotCode = this.config.robotCode || this.config.clientId || '';
 
           await createCardInstance(token, outTrackId, cardTemplateId);
@@ -877,7 +878,7 @@ export class DingTalkGateway extends EventEmitter {
           activeReplyFn = async (text: string) => {
             finalizing = true;
             await lastStreamingCall.catch(() => {});
-            await finalizeCard(token, outTrackId, text);
+            await finalizeCard(token, outTrackId, text, cardTemplateKey);
             this.status.lastOutboundAt = Date.now();
           };
 
@@ -889,14 +890,14 @@ export class DingTalkGateway extends EventEmitter {
 
               // 首次调用时才发 INPUTING（Promise gate，防重复且防过早）
               if (inputingPromise === null) {
-                inputingPromise = startCardInputing(token, outTrackId).catch(() => {});
+                inputingPromise = startCardInputing(token, outTrackId, cardTemplateKey).catch(() => {});
               }
               await inputingPromise;
 
               // 串行化：等上一次 streaming 完成再发新的（防乱序）
               const prev = lastStreamingCall;
               lastStreamingCall = prev
-                .then(() => updateCardStreaming(token, outTrackId, content))
+                .then(() => updateCardStreaming(token, outTrackId, content, cardTemplateKey))
                 .catch(() => {});
               await lastStreamingCall;
             },

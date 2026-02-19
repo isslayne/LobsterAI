@@ -110,7 +110,8 @@ export async function deliverCardInstance(
  */
 export async function startCardInputing(
   token: string,
-  outTrackId: string
+  outTrackId: string,
+  key: string = 'msgContent'
 ): Promise<void> {
   const headers = cardApiHeaders(token);
   try {
@@ -119,9 +120,9 @@ export async function startCardInputing(
       cardData: {
         cardParamMap: {
           flowStatus: '2',
-          msgContent: '',
+          [key]: '',
           staticMsgContent: '',
-          sys_full_json_obj: JSON.stringify({ order: ['msgContent'] }),
+          sys_full_json_obj: JSON.stringify({ order: [key] }),
         },
       },
     }, { headers });
@@ -140,13 +141,14 @@ export async function startCardInputing(
 export async function updateCardStreaming(
   token: string,
   outTrackId: string,
-  content: string
+  content: string,
+  key: string = 'msgContent'
 ): Promise<void> {
   const url = `${DINGTALK_API}/v1.0/card/streaming`;
   const body = {
     outTrackId,
     guid: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    key: 'msgContent',
+    key,
     content,
     isFull: true,
     isFinalize: false,
@@ -165,13 +167,13 @@ export async function updateCardStreaming(
 
 /**
  * 步骤 4：最终化卡片（AI 回复完成后调用）
- * PUT /v1.0/card/streaming with isFinalize:true
- * isFinalize:true 后 DingTalk 保留最后流式内容作为最终显示，无需再更新 card instances。
+ * PUT /v1.0/card/streaming with isFinalize:true — 关闭流式通道，DingTalk 保留最后内容
  */
 export async function finalizeCard(
   token: string,
   outTrackId: string,
-  content: string
+  content: string,
+  key: string = 'msgContent'
 ): Promise<void> {
   const headers = cardApiHeaders(token);
 
@@ -179,7 +181,7 @@ export async function finalizeCard(
     await axios.put(`${DINGTALK_API}/v1.0/card/streaming`, {
       outTrackId,
       guid: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      key: 'msgContent',
+      key,
       content,
       isFull: true,
       isFinalize: true,

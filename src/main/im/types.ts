@@ -14,6 +14,7 @@ export interface DingTalkConfig {
   agentId?: string;
   messageType: 'markdown' | 'card';
   cardTemplateId?: string;
+  cardTemplateKey?: string;
   debug?: boolean;
 }
 
