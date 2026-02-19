@@ -5,7 +5,7 @@ export const GLOBAL_IM_PLATFORMS = ['telegram', 'discord'] as const;
 /**
  * 根据语言获取可见的 IM 平台
  */
-export const getVisibleIMPlatforms = (language: 'zh' | 'en'): readonly string[] => {
+export const getVisibleIMPlatforms = (_language: 'zh' | 'en'): readonly string[] => {
   // 开发环境下显示所有平台
   // if (import.meta.env.DEV) {
   //   return [...CHINA_IM_PLATFORMS, ...GLOBAL_IM_PLATFORMS];
