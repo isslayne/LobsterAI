@@ -11,9 +11,6 @@ export const getVisibleIMPlatforms = (language: 'zh' | 'en'): readonly string[] 
   //   return [...CHINA_IM_PLATFORMS, ...GLOBAL_IM_PLATFORMS];
   // }
 
-  // 中文 → 中国版，英文 → 国际版
-  if (language === 'zh') {
-    return CHINA_IM_PLATFORMS;
-  }
+  // 所有语言均显示全部平台
   return [...CHINA_IM_PLATFORMS, ...GLOBAL_IM_PLATFORMS];
 };
