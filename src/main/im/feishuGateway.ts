@@ -725,6 +725,12 @@ export class FeishuGateway extends EventEmitter {
       return;
     }
 
+    // Unsupported message type (sticker, etc.)
+    if (!ctx.content) {
+      await this.sendWithMedia(ctx.chatId, '抱歉，暂不支持该消息类型，请发送文字或图片。', ctx.messageId);
+      return;
+    }
+
     // Create IMMessage
     const message: IMMessage = {
       platform: 'feishu',

@@ -304,8 +304,11 @@ export class TelegramGateway extends EventEmitter {
       // Extract media attachments
       const attachments = await extractMediaFromMessage(ctx);
 
-      // Skip if no content and no attachments
+      // Skip if no content and no attachments (unsupported message type: sticker, poll, location, etc.)
       if (!textContent && attachments.length === 0) {
+        try {
+          await ctx.reply('抱歉，暂不支持该消息类型，请发送文字或图片。');
+        } catch { /* ignore reply error */ }
         return;
       }
 

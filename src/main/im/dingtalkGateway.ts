@@ -32,6 +32,7 @@ interface MessageContent {
   messageType: string;
   mediaPath?: string;
   mediaType?: string;
+  mediaPaths?: string[]; // richText 多图 downloadCode 数组
 }
 
 export class DingTalkGateway extends EventEmitter {
@@ -51,6 +52,10 @@ export class DingTalkGateway extends EventEmitter {
   private isReconnecting = false;
   private isStopping = false;
   private lastMessageTime = 0;
+
+  // Message deduplication (prevent duplicate processing on Stream SDK retransmit)
+  private processedMsgIds = new Map<string, number>();
+  private readonly MSG_DEDUP_TTL = 5 * 60 * 1000; // 5 minutes
 
   // Health check configuration
   private readonly HEALTH_CHECK_INTERVAL = 10000; // 10 seconds
@@ -402,6 +407,19 @@ export class DingTalkGateway extends EventEmitter {
   }
 
   /**
+   * Deduplicate incoming messages (Stream SDK may retransmit on network retry)
+   */
+  private isMessageProcessed(msgId: string): boolean {
+    const now = Date.now();
+    for (const [id, ts] of this.processedMsgIds) {
+      if (now - ts > this.MSG_DEDUP_TTL) this.processedMsgIds.delete(id);
+    }
+    if (this.processedMsgIds.has(msgId)) return true;
+    this.processedMsgIds.set(msgId, now);
+    return false;
+  }
+
+  /**
    * Extract message content from DingTalk inbound message
    */
   private extractMessageContent(data: DingTalkInboundMessage): MessageContent {
@@ -413,11 +431,22 @@ export class DingTalkGateway extends EventEmitter {
 
     if (msgtype === 'richText') {
       const richTextParts = data.content?.richText || [];
+      this.log('[DingTalk] richText parts:', JSON.stringify(richTextParts));
       let text = '';
+      const imageCodes: string[] = [];
       for (const part of richTextParts) {
-        if (part.text) text += part.text;
+        const imageCode = part.downloadCode || part.pictureDownloadCode;
+        if (part.type === 'picture' && imageCode) {
+          imageCodes.push(imageCode);
+        } else if (part.text) {
+          text += part.text;
+        }
       }
-      return { text: text.trim() || '[富文本消息]', messageType: 'richText' };
+      return {
+        text: text.trim() || '[图文消息]',
+        messageType: 'richText',
+        mediaPaths: imageCodes.length > 0 ? imageCodes : undefined,
+      };
     }
 
     if (msgtype === 'audio') {
@@ -670,8 +699,15 @@ export class DingTalkGateway extends EventEmitter {
       return;
     }
 
+    // Deduplicate (Stream SDK may retransmit the same msgId)
+    if (this.isMessageProcessed(data.msgId)) {
+      this.log(`[DingTalk] 忽略重复消息: ${data.msgId}`);
+      return;
+    }
+
     const content = this.extractMessageContent(data);
     if (!content.text) {
+      await this.sendBySession(data.sessionWebhook, '抱歉，暂不支持该消息类型，请发送文字或图片。');
       return;
     }
 
@@ -716,6 +752,34 @@ export class DingTalkGateway extends EventEmitter {
         }
       } catch (e: any) {
         this.log(`[DingTalk] 下载图片失败: ${e.message}`);
+      }
+    }
+
+    // Download richText inline images
+    if (content.mediaPaths && content.mediaPaths.length > 0) {
+      try {
+        const saveDir = getDingTalkMediaDir();
+        const results = await Promise.all(
+          content.mediaPaths.map(async (code, idx) => {
+            const fileName = `${Date.now()}_${idx}.jpg`;
+            return downloadDingTalkMedia(
+              await this.getAccessToken(),
+              this.config!.clientId,
+              code,
+              fileName,
+              saveDir
+            );
+          })
+        );
+        const valid = results.filter(r => r !== null);
+        if (valid.length > 0) {
+          attachments = [
+            ...(attachments || []),
+            ...valid.map(r => ({ type: 'image' as const, localPath: r!.localPath, mimeType: 'image/jpeg' })),
+          ];
+        }
+      } catch (e: any) {
+        this.log(`[DingTalk] 下载 richText 图片失败: ${e.message}`);
       }
     }
 

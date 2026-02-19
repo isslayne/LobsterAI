@@ -35,7 +35,7 @@ export interface DingTalkInboundMessage {
     fileName?: string;
     pictureName?: string;
     recognition?: string;
-    richText?: Array<{ text?: string }>;
+    richText?: Array<{ text?: string; type?: string; downloadCode?: string; pictureDownloadCode?: string; pictureName?: string }>;
   };
   conversationType: '1' | '2'; // 1: DM, 2: Group
   conversationId: string;

@@ -232,8 +232,9 @@ export class DiscordGateway extends EventEmitter {
         return;
       }
 
-      // Ignore empty messages
+      // Ignore empty messages (sticker, embed, unsupported attachment-only messages)
       if (!message.content || message.content.trim() === '') {
+        try { await message.reply('抱歉，暂不支持该消息类型，请发送文字或图片。'); } catch { /* ignore */ }
         return;
       }
 
@@ -264,8 +265,9 @@ export class DiscordGateway extends EventEmitter {
         .replace(/<@&\d+>/g, '')  // Role mentions
         .trim();
 
-      // Ignore empty messages after stripping mentions
+      // Ignore empty messages after stripping mentions (user only @mentioned the bot with no text)
       if (!cleanedContent) {
+        try { await message.reply('抱歉，暂不支持该消息类型，请发送文字或图片。'); } catch { /* ignore */ }
         return;
       }
 
