@@ -22,6 +22,12 @@ import { ScheduledTaskStore } from './scheduledTaskStore';
 import { Scheduler } from './libs/scheduler';
 import { initLogger, getLogFilePath } from './logger';
 
+// Enable remote debugging for MCP server integration
+const isDev = process.env.NODE_ENV === 'development';
+if (isDev) {
+  app.commandLine.appendSwitch('remote-debugging-port', '9223');
+}
+
 // 设置应用程序名称
 app.name = APP_NAME;
 app.setName(APP_NAME);
@@ -284,7 +290,6 @@ const migrateLegacyUserData = (): void => {
 configureUserDataPath();
 initLogger();
 
-const isDev = process.env.NODE_ENV === 'development';
 const isLinux = process.platform === 'linux';
 const isMac = process.platform === 'darwin';
 const isWindows = process.platform === 'win32';
@@ -305,6 +310,7 @@ const TITLEBAR_COLORS = {
   dark: { color: '#0F1117', symbolColor: '#E4E5E9' },
   // Align light title bar with app light surface-muted tone to reduce visual contrast.
   light: { color: '#F3F4F6', symbolColor: '#1A1D23' },
+  tahoeDark: { color: '#0C0E18', symbolColor: '#E8EAF0' },
 } as const;
 
 const safeDecodeURIComponent = (value: string): string => {
@@ -746,7 +752,13 @@ const activeStreamControllers = new Map<string, AbortController>();
 let lastReloadAt = 0;
 const MIN_RELOAD_INTERVAL_MS = 5000;
 
-const resolveThemeFromConfig = (config?: { theme?: string }): 'light' | 'dark' => {
+type TitleBarThemeKey = keyof typeof TITLEBAR_COLORS;
+
+const resolveThemeFromConfig = (config?: { theme?: string; themeStyle?: string }): TitleBarThemeKey => {
+  // Tahoe 强制使用 tahoeDark 色值
+  if (config?.themeStyle === 'tahoe') {
+    return 'tahoeDark';
+  }
   if (config?.theme === 'dark') {
     return 'dark';
   }
@@ -756,19 +768,25 @@ const resolveThemeFromConfig = (config?: { theme?: string }): 'light' | 'dark' =
   return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
 };
 
-const getInitialTheme = (): 'light' | 'dark' => {
-  const config = getStore().get('app_config') as { theme?: string } | undefined;
+const getInitialTheme = (): TitleBarThemeKey => {
+  const config = getStore().get('app_config') as { theme?: string; themeStyle?: string } | undefined;
   return resolveThemeFromConfig(config);
 };
 
 const getTitleBarOverlayOptions = () => {
-  const config = getStore().get('app_config') as { theme?: string } | undefined;
-  const theme = resolveThemeFromConfig(config);
+  const config = getStore().get('app_config') as { theme?: string; themeStyle?: string } | undefined;
+  const themeKey = resolveThemeFromConfig(config);
   return {
-    color: TITLEBAR_COLORS[theme].color,
-    symbolColor: TITLEBAR_COLORS[theme].symbolColor,
+    color: TITLEBAR_COLORS[themeKey].color,
+    symbolColor: TITLEBAR_COLORS[themeKey].symbolColor,
     height: TITLEBAR_HEIGHT,
   };
+};
+
+const BG_COLORS: Record<TitleBarThemeKey, string> = {
+  dark: '#0F1117',
+  light: '#F8F9FB',
+  tahoeDark: '#0C0E18',
 };
 
 const updateTitleBarOverlay = () => {
@@ -777,9 +795,9 @@ const updateTitleBarOverlay = () => {
     mainWindow.setTitleBarOverlay(getTitleBarOverlayOptions());
   }
   // Also update the window background color to match the theme
-  const config = getStore().get('app_config') as { theme?: string } | undefined;
-  const theme = resolveThemeFromConfig(config);
-  mainWindow.setBackgroundColor(theme === 'dark' ? '#0F1117' : '#F8F9FB');
+  const config = getStore().get('app_config') as { theme?: string; themeStyle?: string } | undefined;
+  const themeKey = resolveThemeFromConfig(config);
+  mainWindow.setBackgroundColor(BG_COLORS[themeKey]);
 };
 
 const emitWindowState = () => {

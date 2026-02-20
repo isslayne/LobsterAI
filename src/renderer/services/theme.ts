@@ -1,8 +1,9 @@
 import { configService } from './config';
 
 type ThemeType = 'light' | 'dark' | 'system';
+type ThemeStyle = 'classic' | 'tahoe';
 
-// Cold modern color palette
+// Color palette per theme variant
 const COLORS = {
   light: {
     bg: '#F8F9FB',
@@ -12,11 +13,16 @@ const COLORS = {
     bg: '#0F1117',
     text: '#E4E5E9',
   },
+  tahoeDark: {
+    bg: '#0C0E18',
+    text: '#E8EAF0',
+  },
 };
 
 class ThemeService {
   private mediaQuery: MediaQueryList | null = null;
   private currentTheme: ThemeType = 'system';
+  private currentThemeStyle: ThemeStyle = 'classic';
   private appliedTheme: 'light' | 'dark' | null = null;
   private initialized = false;
   private mediaQueryListener: ((event: MediaQueryListEvent) => void) | null = null;
@@ -36,12 +42,24 @@ class ThemeService {
 
     try {
       const config = configService.getConfig();
-      this.setTheme(config.theme);
+
+      // 先设置主题风格（可能强制 dark）
+      if (config.themeStyle) {
+        this.currentThemeStyle = config.themeStyle;
+      }
+
+      if (this.currentThemeStyle === 'tahoe') {
+        // Tahoe 强制深色模式
+        document.documentElement.classList.add('tahoe');
+        this.setTheme('dark');
+      } else {
+        this.setTheme(config.theme);
+      }
 
       // 监听系统主题变化
       if (this.mediaQuery) {
         this.mediaQueryListener = (e) => {
-          if (this.currentTheme === 'system') {
+          if (this.currentTheme === 'system' && this.currentThemeStyle !== 'tahoe') {
             this.applyTheme(e.matches ? 'dark' : 'light');
           }
         };
@@ -49,13 +67,51 @@ class ThemeService {
       }
     } catch (error) {
       console.error('Failed to initialize theme:', error);
-      // 默认使用系统主题
       this.setTheme('system');
     }
   }
 
+  // 设置主题风格
+  setThemeStyle(style: ThemeStyle): void {
+    if (this.currentThemeStyle === style) {
+      return;
+    }
+
+    console.log(`Setting theme style to: ${style}`);
+    this.currentThemeStyle = style;
+    const root = document.documentElement;
+
+    if (style === 'tahoe') {
+      root.classList.add('tahoe');
+      // Tahoe 强制深色模式，重置 appliedTheme 以确保重新应用
+      this.appliedTheme = null;
+      this.currentTheme = 'dark';
+      this.applyTheme('dark');
+    } else {
+      root.classList.remove('tahoe');
+      // 恢复时重新应用当前主题以刷新颜色
+      this.appliedTheme = null;
+      this.applyTheme(this.getEffectiveTheme());
+    }
+
+    // 通知主进程更新标题栏
+    if (window.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.send('app:setThemeStyle', style);
+    }
+  }
+
+  // 获取当前主题风格
+  getThemeStyle(): ThemeStyle {
+    return this.currentThemeStyle;
+  }
+
   // 设置主题
   setTheme(theme: ThemeType): void {
+    // Tahoe 模式下忽略非 dark 的切换请求
+    if (this.currentThemeStyle === 'tahoe' && theme !== 'dark') {
+      return;
+    }
+
     const effectiveTheme = theme === 'system'
       ? (this.mediaQuery?.matches ? 'dark' : 'light')
       : theme;
@@ -68,11 +124,9 @@ class ThemeService {
     this.currentTheme = theme;
 
     if (theme === 'system') {
-      // 如果是系统主题，则根据系统设置应用
       console.log(`System theme detected, using: ${effectiveTheme}`);
     }
 
-    // 直接应用指定主题
     this.applyTheme(effectiveTheme);
   }
 
@@ -83,6 +137,9 @@ class ThemeService {
 
   // 获取当前有效主题（实际应用的明/暗主题）
   getEffectiveTheme(): 'light' | 'dark' {
+    if (this.currentThemeStyle === 'tahoe') {
+      return 'dark';
+    }
     if (this.currentTheme === 'system') {
       return this.mediaQuery?.matches ? 'dark' : 'light';
     }
@@ -91,7 +148,6 @@ class ThemeService {
 
   // 应用主题到DOM
   private applyTheme(theme: 'light' | 'dark'): void {
-    // 避免重复应用相同主题
     if (this.appliedTheme === theme) {
       return;
     }
@@ -99,35 +155,27 @@ class ThemeService {
     console.log(`Applying theme: ${theme}`);
     this.appliedTheme = theme;
     const root = document.documentElement;
-    const colors = COLORS[theme];
+
+    // 判断是否使用 Tahoe 深色色值
+    const isTahoe = this.currentThemeStyle === 'tahoe' && theme === 'dark';
+    const colors = isTahoe ? COLORS.tahoeDark : COLORS[theme];
 
     if (theme === 'dark') {
-      // Apply dark theme to HTML element (for Tailwind)
       root.classList.add('dark');
       root.classList.remove('light');
-
-      // Make sure theme is consistent across entire DOM
       document.body.classList.add('dark');
       document.body.classList.remove('light');
-
-      // Set background and text colors
-      root.style.backgroundColor = colors.bg;
-      document.body.style.backgroundColor = colors.bg;
-      document.body.style.color = colors.text;
     } else {
-      // Apply light theme to HTML element (for Tailwind)
       root.classList.remove('dark');
       root.classList.add('light');
-
-      // Make sure theme is consistent across entire DOM
       document.body.classList.remove('dark');
       document.body.classList.add('light');
-
-      // Set background and text colors
-      root.style.backgroundColor = colors.bg;
-      document.body.style.backgroundColor = colors.bg;
-      document.body.style.color = colors.text;
     }
+
+    // Set background and text colors
+    root.style.backgroundColor = colors.bg;
+    document.body.style.backgroundColor = colors.bg;
+    document.body.style.color = colors.text;
 
     // Update CSS variables for color transition animations
     root.style.setProperty('--theme-transition', 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease');
@@ -139,12 +187,11 @@ class ThemeService {
       if (theme === 'dark') {
         rootElement.classList.add('dark');
         rootElement.classList.remove('light');
-        rootElement.style.backgroundColor = colors.bg;
       } else {
         rootElement.classList.remove('dark');
         rootElement.classList.add('light');
-        rootElement.style.backgroundColor = colors.bg;
       }
+      rootElement.style.backgroundColor = colors.bg;
     }
   }
 }

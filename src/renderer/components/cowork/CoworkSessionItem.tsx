@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { CoworkSessionSummary, CoworkSessionStatus } from '../../types/cowork';
-import { EllipsisHorizontalIcon, ExclamationTriangleIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
+import type { CoworkSessionSummary } from '../../types/cowork';
+import { ChatBubbleLeftIcon, EllipsisHorizontalIcon, ExclamationTriangleIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { i18nService } from '../../services/i18n';
 
 interface CoworkSessionItemProps {
@@ -13,12 +13,6 @@ interface CoworkSessionItemProps {
   onRename: (title: string) => void;
 }
 
-const statusLabels: Record<CoworkSessionStatus, string> = {
-  idle: 'coworkStatusIdle',
-  running: 'coworkStatusRunning',
-  completed: 'coworkStatusCompleted',
-  error: 'coworkStatusError',
-};
 
 const PushPinIcon: React.FC<React.SVGProps<SVGSVGElement> & { slashed?: boolean }> = ({
   slashed,
@@ -41,45 +35,9 @@ const PushPinIcon: React.FC<React.SVGProps<SVGSVGElement> & { slashed?: boolean 
   </svg>
 );
 
-const formatRelativeTime = (timestamp: number): { compact: string; full: string } => {
-  const now = Date.now();
-  const diff = now - timestamp;
-
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) {
-    return {
-      compact: 'now',
-      full: i18nService.t('justNow'),
-    };
-  } else if (minutes < 60) {
-    return {
-      compact: `${minutes}m`,
-      full: `${minutes} ${i18nService.t('minutesAgo')}`,
-    };
-  } else if (hours < 24) {
-    return {
-      compact: `${hours}h`,
-      full: `${hours} ${i18nService.t('hoursAgo')}`,
-    };
-  } else if (days === 1) {
-    return {
-      compact: '1d',
-      full: i18nService.t('yesterday'),
-    };
-  } else {
-    return {
-      compact: `${days}d`,
-      full: `${days} ${i18nService.t('daysAgo')}`,
-    };
-  }
-};
-
 const CoworkSessionItem: React.FC<CoworkSessionItemProps> = ({
   session,
-  hasUnread,
+  hasUnread: _hasUnread,
   isActive,
   onSelect,
   onDelete,
@@ -238,10 +196,7 @@ const CoworkSessionItem: React.FC<CoworkSessionItemProps> = ({
   const actionLabel = i18nService.t('coworkSessionActions');
   const renameLabel = i18nService.t('renameConversation');
   const deleteLabel = i18nService.t('deleteSession');
-  const relativeTime = formatRelativeTime(session.updatedAt);
   const showRunningIndicator = session.status === 'running';
-  const showUnreadIndicator = !showRunningIndicator && hasUnread;
-  const showStatusIndicator = showRunningIndicator || showUnreadIndicator;
   const menuItems = useMemo(() => {
     return [
       { key: 'rename', label: renameLabel, onClick: handleRenameClick, tone: 'neutral' as const },
@@ -264,62 +219,55 @@ const CoworkSessionItem: React.FC<CoworkSessionItemProps> = ({
         closeMenu();
         onSelect();
       }}
-      className={`group relative p-3 rounded-lg cursor-pointer transition-all duration-150 ${
+      className={`group relative flex items-center gap-2 h-[38px] px-2.5 rounded-lg cursor-pointer transition-colors ${
         isActive
-          ? 'bg-black/[0.06] dark:bg-white/[0.08]'
-          : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.05]'
+          ? 'bg-claude-accentMuted'
+          : 'hover:bg-claude-surfaceHover dark:hover:bg-claude-darkSurfaceHover'
       }`}
     >
-      {/* Content area */}
-      <div className="flex items-start">
-        <div className="flex-1 min-w-0">
-          <div className={`flex items-center mb-1 ${showStatusIndicator ? 'gap-2' : 'gap-0'}`}>
-            {/* Status indicator */}
-            {showStatusIndicator && (
-              <span
-                className={`block w-2 h-2 rounded-full bg-claude-accent flex-shrink-0 ${
-                  showRunningIndicator ? 'shadow-[0_0_6px_rgba(59,130,246,0.5)] animate-pulse' : ''
-                }`}
-                title={showRunningIndicator ? i18nService.t(statusLabels[session.status]) : undefined}
-              />
-            )}
-            {isRenaming ? (
-              <input
-                ref={renameInputRef}
-                value={renameValue}
-                onChange={(event) => setRenameValue(event.target.value)}
-                onClick={(event) => event.stopPropagation()}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    handleRenameSave(event);
-                  }
-                  if (event.key === 'Escape') {
-                    handleRenameCancel(event);
-                  }
-                }}
-                onBlur={handleRenameBlur}
-                className="flex-1 min-w-0 rounded-lg border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkBg bg-claude-bg px-2 py-1 text-sm font-medium dark:text-claude-darkText text-claude-text focus:outline-none focus:ring-2 focus:ring-claude-accent"
-              />
-            ) : (
-              <h3 className="text-sm font-medium dark:text-claude-darkText text-claude-text truncate">
-                {session.title}
-              </h3>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-xs dark:text-claude-darkTextSecondary text-claude-textSecondary">
-            <span className="whitespace-nowrap" title={relativeTime.full}>
-              {relativeTime.compact}
-            </span>
-            <span className="text-[10px] uppercase tracking-wider whitespace-nowrap">
-              {i18nService.t(statusLabels[session.status])}
-            </span>
-          </div>
-        </div>
+      {/* Chat icon */}
+      <ChatBubbleLeftIcon
+        className={`w-3.5 h-3.5 shrink-0 ${
+          isActive
+            ? 'text-claude-accentLight'
+            : showRunningIndicator
+              ? 'text-claude-accent animate-pulse'
+              : 'dark:text-claude-darkTextSecondary/50 text-claude-textSecondary/50'
+        }`}
+      />
+      {/* Title */}
+      <div className="flex-1 min-w-0">
+        {isRenaming ? (
+          <input
+            ref={renameInputRef}
+            value={renameValue}
+            onChange={(event) => setRenameValue(event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                handleRenameSave(event);
+              }
+              if (event.key === 'Escape') {
+                handleRenameCancel(event);
+              }
+            }}
+            onBlur={handleRenameBlur}
+            className="w-full rounded border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkBg bg-claude-bg px-1.5 py-0.5 text-[13px] dark:text-claude-darkText text-claude-text focus:outline-none focus:ring-1 focus:ring-claude-accent"
+          />
+        ) : (
+          <span className={`block text-[13px] truncate ${
+            isActive
+              ? 'dark:text-claude-darkText text-claude-text font-medium'
+              : 'dark:text-claude-darkTextSecondary text-claude-textSecondary font-normal'
+          }`}>
+            {session.title}
+          </span>
+        )}
       </div>
 
       {/* Actions - absolutely positioned overlay */}
       <div
-        className={`absolute right-1.5 top-1.5 transition-opacity ${
+        className={`absolute right-1 top-1/2 -translate-y-1/2 transition-opacity ${
           isRenaming
             ? 'opacity-0 pointer-events-none'
             : session.pinned

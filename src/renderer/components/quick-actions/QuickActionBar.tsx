@@ -14,7 +14,7 @@ interface QuickActionBarProps {
 }
 
 // 图标映射
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   PresentationChartBarIcon,
   GlobeAltIcon,
   DevicePhoneMobileIcon,
@@ -28,7 +28,7 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({ actions, onActionSelect
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2.5">
+    <div className="flex flex-wrap items-center justify-center gap-3">
       {actions.map((action) => {
         const IconComponent = iconMap[action.icon];
 
@@ -37,10 +37,13 @@ const QuickActionBar: React.FC<QuickActionBarProps> = ({ actions, onActionSelect
             key={action.id}
             type="button"
             onClick={() => onActionSelect(action.id)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ease-out dark:bg-claude-darkSurface bg-claude-surface dark:border-claude-darkBorder border-claude-border dark:text-claude-darkTextSecondary text-claude-textSecondary dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover hover:border-claude-accent/40"
+            className="quick-action-card flex items-center gap-2 px-4 h-10 rounded-full border text-sm font-medium transition-all duration-200 ease-out dark:bg-claude-darkSurface bg-claude-surface dark:border-claude-darkBorder border-claude-border dark:text-claude-darkText text-claude-text dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover hover:border-claude-accent/40"
           >
             {IconComponent && (
-              <IconComponent className="w-4 h-4 dark:text-claude-darkTextSecondary text-claude-textSecondary" />
+              <IconComponent
+                className="w-4 h-4"
+                style={{ color: action.color || undefined }}
+              />
             )}
             <span>{action.label}</span>
           </button>

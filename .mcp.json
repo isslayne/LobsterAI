@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "electron": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "electron-mcp-server"
+      ],
+      "env": {
+        "SECURITY_LEVEL": "development",
+        "SCREENSHOT_ENCRYPTION_KEY": "d23c93ff5b7c9c8f4ffb76d25186acc1c714618fc95e4f9b64424211dce3f0bb",
+        "ELECTRON_REMOTE_DEBUGGING_PORT": "9223"
+      }
+    }
+  }
+}

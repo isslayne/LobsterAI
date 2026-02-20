@@ -69,7 +69,7 @@ const CoworkSearchModal: React.FC<CoworkSearchModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="modal-content w-full max-w-2xl mt-10 rounded-2xl border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkSurface bg-claude-surface shadow-modal overflow-hidden"
+        className="modal-content relative w-full max-w-2xl mt-10 rounded-2xl border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkSurface bg-claude-surface shadow-modal overflow-hidden glass-panel"
         role="dialog"
         aria-modal="true"
         aria-label={i18nService.t('search')}

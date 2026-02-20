@@ -285,10 +285,12 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
   // 状态
   const [activeTab, setActiveTab] = useState<TabType>(initialTab ?? 'general');
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [themeStyle, setThemeStyleLocal] = useState<'classic' | 'tahoe'>(themeService.getThemeStyle());
   const [language, setLanguage] = useState<LanguageType>('zh');
   const [autoLaunch, setAutoLaunchState] = useState(false);
   const [isUpdatingAutoLaunch, setIsUpdatingAutoLaunch] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(notice ?? null);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -296,6 +298,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
   const [isImportingProviders, setIsImportingProviders] = useState(false);
   const [isExportingProviders, setIsExportingProviders] = useState(false);
   const initialThemeRef = useRef<'light' | 'dark' | 'system'>(themeService.getTheme());
+  const initialThemeStyleRef = useRef<'classic' | 'tahoe'>(themeService.getThemeStyle());
   const initialLanguageRef = useRef<LanguageType>(i18nService.getLanguage());
   const didSaveRef = useRef(false);
 
@@ -389,8 +392,10 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
       
       // Set general settings
       initialThemeRef.current = config.theme;
+      initialThemeStyleRef.current = config.themeStyle || 'classic';
       initialLanguageRef.current = config.language;
       setTheme(config.theme);
+      setThemeStyleLocal(config.themeStyle || 'classic');
       setLanguage(config.language);
 
       // Load auto-launch setting
@@ -562,6 +567,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
       if (didSaveRef.current) {
         return;
       }
+      themeService.setThemeStyle(initialThemeStyleRef.current);
       themeService.setTheme(initialThemeRef.current);
       i18nService.setLanguage(initialLanguageRef.current, { persist: false });
     };
@@ -863,11 +869,13 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
         },
         providers: normalizedProviders, // Save all providers configuration
         theme,
+        themeStyle,
         language,
         shortcuts,
       });
 
-      // 应用主题
+      // 应用主题风格和主题
+      themeService.setThemeStyle(themeStyle);
       themeService.setTheme(theme);
 
       // 应用语言
@@ -1494,16 +1502,91 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
               </label>
             </div>
 
-            {/* Appearance Section */}
+            {/* Theme Style Section */}
             <div>
               <h4 className="text-sm font-medium dark:text-claude-darkText text-claude-text mb-3">
-                {i18nService.t('appearance')}
+                {i18nService.t('themeStyle')}
               </h4>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Classic Card */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setThemeStyleLocal('classic');
+                    themeService.setThemeStyle('classic');
+                  }}
+                  className={`flex flex-col items-center rounded-xl p-3 transition-colors cursor-pointer ${
+                    themeStyle === 'classic'
+                      ? 'border-2 border-claude-accent bg-claude-accent/5 dark:bg-claude-accent/10'
+                      : 'border dark:border-claude-darkBorder border-claude-border hover:border-claude-accent/50'
+                  }`}
+                >
+                  <svg viewBox="0 0 120 80" className="w-full h-auto rounded-md mb-2 overflow-hidden" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="120" height="80" fill="#1A1A2E" />
+                    <rect x="0" y="0" width="30" height="80" fill="#2A2A40" />
+                    <rect x="4" y="8" width="22" height="4" rx="2" fill="#3A3A55" />
+                    <rect x="4" y="16" width="18" height="3" rx="1.5" fill="#3A3A55" />
+                    <rect x="4" y="22" width="20" height="3" rx="1.5" fill="#3A3A55" />
+                    <rect x="36" y="8" width="78" height="64" rx="4" fill="#1A1D27" />
+                    <rect x="42" y="16" width="50" height="4" rx="2" fill="#3A3F4B" />
+                    <rect x="42" y="24" width="66" height="3" rx="1.5" fill="#252930" />
+                    <rect x="42" y="30" width="60" height="3" rx="1.5" fill="#252930" />
+                  </svg>
+                  <span className={`text-xs font-medium ${
+                    themeStyle === 'classic' ? 'text-claude-accent' : 'dark:text-claude-darkTextSecondary text-claude-textSecondary'
+                  }`}>
+                    {i18nService.t('themeClassic')}
+                  </span>
+                </button>
+
+                {/* Tahoe Card */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setThemeStyleLocal('tahoe');
+                    setTheme('dark');
+                    themeService.setThemeStyle('tahoe');
+                  }}
+                  className={`flex flex-col items-center rounded-xl p-3 transition-colors cursor-pointer ${
+                    themeStyle === 'tahoe'
+                      ? 'border-2 border-claude-accent bg-claude-accent/5 dark:bg-claude-accent/10'
+                      : 'border dark:border-claude-darkBorder border-claude-border hover:border-claude-accent/50'
+                  }`}
+                >
+                  <svg viewBox="0 0 120 80" className="w-full h-auto rounded-md mb-2 overflow-hidden" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="120" height="80" fill="#0C0E18" />
+                    <rect x="0" y="0" width="30" height="80" fill="#0E101A" opacity="0.8" />
+                    <rect x="0" y="0" width="30" height="80" fill="url(#tahoeGlass)" />
+                    <defs><linearGradient id="tahoeGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.06" /><stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.02" /></linearGradient></defs>
+                    <rect x="4" y="8" width="22" height="4" rx="2" fill="#3B82F6" />
+                    <rect x="4" y="16" width="18" height="3" rx="1.5" fill="#FFFFFF" opacity="0.15" />
+                    <rect x="4" y="22" width="20" height="3" rx="1.5" fill="#FFFFFF" opacity="0.1" />
+                    <rect x="36" y="8" width="78" height="64" rx="4" fill="#161A28" opacity="0.6" />
+                    <rect x="42" y="16" width="50" height="4" rx="2" fill="#3B82F6" opacity="0.4" />
+                    <rect x="42" y="24" width="66" height="3" rx="1.5" fill="#FFFFFF" opacity="0.08" />
+                    <rect x="42" y="30" width="60" height="3" rx="1.5" fill="#FFFFFF" opacity="0.06" />
+                  </svg>
+                  <span className={`text-xs font-semibold ${
+                    themeStyle === 'tahoe' ? 'text-claude-accentLight' : 'dark:text-claude-darkTextSecondary text-claude-textSecondary'
+                  }`}>
+                    {i18nService.t('themeTahoe')}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <hr className="dark:border-claude-darkBorder border-claude-border" />
+
+            {/* Color Scheme Section */}
+            <div className={themeStyle === 'tahoe' ? 'opacity-50 pointer-events-none' : ''}>
+              <h4 className="text-sm font-medium dark:text-claude-darkText text-claude-text mb-3">
+                {i18nService.t('colorScheme')}
+              </h4>
+              <div className="flex gap-3">
                 {([
-                  { value: 'light' as const, label: i18nService.t('light') },
-                  { value: 'dark' as const, label: i18nService.t('dark') },
-                  { value: 'system' as const, label: i18nService.t('system') },
+                  { value: 'light' as const, label: i18nService.t('light'), circleColor: '#F0F0F5', circleBorder: '#D0D0D8' },
+                  { value: 'dark' as const, label: i18nService.t('dark'), circleColor: '#1A1A2E', circleBorder: '#3A3A55' },
+                  { value: 'system' as const, label: i18nService.t('system'), circleColor: '', circleBorder: '' },
                 ]).map((option) => {
                   const isSelected = theme === option.value;
                   return (
@@ -1514,100 +1597,31 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
                         setTheme(option.value);
                         themeService.setTheme(option.value);
                       }}
-                      className={`flex flex-col items-center rounded-xl border-2 p-3 transition-colors cursor-pointer ${
+                      className={`flex flex-col items-center rounded-xl py-2 px-3 transition-colors cursor-pointer ${
                         isSelected
-                          ? 'border-claude-accent bg-claude-accent/5 dark:bg-claude-accent/10'
-                          : 'dark:border-claude-darkBorder border-claude-border hover:border-claude-accent/50 dark:hover:border-claude-accent/50'
+                          ? 'border-2 border-claude-accent bg-claude-accent/5 dark:bg-claude-accent/10'
+                          : 'border dark:border-claude-darkBorder border-claude-border hover:border-claude-accent/50'
                       }`}
+                      style={{ minWidth: '72px' }}
                     >
-                      <svg viewBox="0 0 120 80" className="w-full h-auto rounded-md mb-2 overflow-hidden" xmlns="http://www.w3.org/2000/svg">
-                        {option.value === 'light' && (
-                          <>
-                            <rect width="120" height="80" fill="#F8F9FB" />
-                            <rect x="0" y="0" width="30" height="80" fill="#EBEDF0" />
-                            <rect x="4" y="8" width="22" height="4" rx="2" fill="#C8CBD0" />
-                            <rect x="4" y="16" width="18" height="3" rx="1.5" fill="#D5D7DB" />
-                            <rect x="4" y="22" width="20" height="3" rx="1.5" fill="#D5D7DB" />
-                            <rect x="4" y="28" width="16" height="3" rx="1.5" fill="#D5D7DB" />
-                            <rect x="36" y="8" width="78" height="64" rx="4" fill="#FFFFFF" />
-                            <rect x="42" y="16" width="50" height="4" rx="2" fill="#D5D7DB" />
-                            <rect x="42" y="24" width="66" height="3" rx="1.5" fill="#E2E4E7" />
-                            <rect x="42" y="30" width="60" height="3" rx="1.5" fill="#E2E4E7" />
-                            <rect x="42" y="36" width="55" height="3" rx="1.5" fill="#E2E4E7" />
-                            <rect x="42" y="46" width="40" height="4" rx="2" fill="#D5D7DB" />
-                            <rect x="42" y="54" width="66" height="3" rx="1.5" fill="#E2E4E7" />
-                            <rect x="42" y="60" width="58" height="3" rx="1.5" fill="#E2E4E7" />
-                          </>
-                        )}
-                        {option.value === 'dark' && (
-                          <>
-                            <rect width="120" height="80" fill="#0F1117" />
-                            <rect x="0" y="0" width="30" height="80" fill="#151820" />
-                            <rect x="4" y="8" width="22" height="4" rx="2" fill="#3A3F4B" />
-                            <rect x="4" y="16" width="18" height="3" rx="1.5" fill="#2A2F3A" />
-                            <rect x="4" y="22" width="20" height="3" rx="1.5" fill="#2A2F3A" />
-                            <rect x="4" y="28" width="16" height="3" rx="1.5" fill="#2A2F3A" />
-                            <rect x="36" y="8" width="78" height="64" rx="4" fill="#1A1D27" />
-                            <rect x="42" y="16" width="50" height="4" rx="2" fill="#3A3F4B" />
-                            <rect x="42" y="24" width="66" height="3" rx="1.5" fill="#252930" />
-                            <rect x="42" y="30" width="60" height="3" rx="1.5" fill="#252930" />
-                            <rect x="42" y="36" width="55" height="3" rx="1.5" fill="#252930" />
-                            <rect x="42" y="46" width="40" height="4" rx="2" fill="#3A3F4B" />
-                            <rect x="42" y="54" width="66" height="3" rx="1.5" fill="#252930" />
-                            <rect x="42" y="60" width="58" height="3" rx="1.5" fill="#252930" />
-                          </>
-                        )}
-                        {option.value === 'system' && (
-                          <>
-                            <defs>
-                              <clipPath id="left-half">
-                                <rect x="0" y="0" width="60" height="80" />
-                              </clipPath>
-                              <clipPath id="right-half">
-                                <rect x="60" y="0" width="60" height="80" />
-                              </clipPath>
-                            </defs>
-                            {/* Light half */}
-                            <g clipPath="url(#left-half)">
-                              <rect width="120" height="80" fill="#F8F9FB" />
-                              <rect x="0" y="0" width="30" height="80" fill="#EBEDF0" />
-                              <rect x="4" y="8" width="22" height="4" rx="2" fill="#C8CBD0" />
-                              <rect x="4" y="16" width="18" height="3" rx="1.5" fill="#D5D7DB" />
-                              <rect x="4" y="22" width="20" height="3" rx="1.5" fill="#D5D7DB" />
-                              <rect x="4" y="28" width="16" height="3" rx="1.5" fill="#D5D7DB" />
-                              <rect x="36" y="8" width="78" height="64" rx="4" fill="#FFFFFF" />
-                              <rect x="42" y="16" width="50" height="4" rx="2" fill="#D5D7DB" />
-                              <rect x="42" y="24" width="66" height="3" rx="1.5" fill="#E2E4E7" />
-                              <rect x="42" y="30" width="60" height="3" rx="1.5" fill="#E2E4E7" />
-                              <rect x="42" y="36" width="55" height="3" rx="1.5" fill="#E2E4E7" />
-                              <rect x="42" y="46" width="40" height="4" rx="2" fill="#D5D7DB" />
-                              <rect x="42" y="54" width="66" height="3" rx="1.5" fill="#E2E4E7" />
-                            </g>
-                            {/* Dark half */}
-                            <g clipPath="url(#right-half)">
-                              <rect width="120" height="80" fill="#0F1117" />
-                              <rect x="0" y="0" width="30" height="80" fill="#151820" />
-                              <rect x="4" y="8" width="22" height="4" rx="2" fill="#3A3F4B" />
-                              <rect x="4" y="16" width="18" height="3" rx="1.5" fill="#2A2F3A" />
-                              <rect x="4" y="22" width="20" height="3" rx="1.5" fill="#2A2F3A" />
-                              <rect x="4" y="28" width="16" height="3" rx="1.5" fill="#2A2F3A" />
-                              <rect x="36" y="8" width="78" height="64" rx="4" fill="#1A1D27" />
-                              <rect x="42" y="16" width="50" height="4" rx="2" fill="#3A3F4B" />
-                              <rect x="42" y="24" width="66" height="3" rx="1.5" fill="#252930" />
-                              <rect x="42" y="30" width="60" height="3" rx="1.5" fill="#252930" />
-                              <rect x="42" y="36" width="55" height="3" rx="1.5" fill="#252930" />
-                              <rect x="42" y="46" width="40" height="4" rx="2" fill="#3A3F4B" />
-                              <rect x="42" y="54" width="66" height="3" rx="1.5" fill="#252930" />
-                            </g>
-                            {/* Divider line */}
-                            <line x1="60" y1="0" x2="60" y2="80" stroke="#888" strokeWidth="0.5" />
-                          </>
-                        )}
-                      </svg>
-                      <span className={`text-xs font-medium ${
-                        isSelected
-                          ? 'text-claude-accent'
-                          : 'dark:text-claude-darkText text-claude-text'
+                      {option.value === 'system' ? (
+                        <svg width="24" height="24" viewBox="0 0 24 24" className="mb-1.5">
+                          <defs>
+                            <linearGradient id="sysGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#F0F0F5" />
+                              <stop offset="100%" stopColor="#1A1A2E" />
+                            </linearGradient>
+                          </defs>
+                          <circle cx="12" cy="12" r="11" fill="url(#sysGrad)" stroke={isSelected ? '#3B82F6' : '#888'} strokeWidth="1" />
+                        </svg>
+                      ) : (
+                        <div
+                          className="w-6 h-6 rounded-full mb-1.5 border"
+                          style={{ backgroundColor: option.circleColor, borderColor: option.circleBorder }}
+                        />
+                      )}
+                      <span className={`text-[10px] font-medium ${
+                        isSelected ? 'text-claude-accent' : 'dark:text-claude-darkTextSecondary text-claude-textSecondary'
                       }`}>
                         {option.label}
                       </span>
@@ -1615,6 +1629,11 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
                   );
                 })}
               </div>
+              {themeStyle === 'tahoe' && (
+                <p className="text-xs dark:text-claude-darkTextSecondary text-claude-textSecondary mt-2">
+                  {i18nService.t('themeTahoeDarkOnly')}
+                </p>
+              )}
             </div>
           </div>
         );
@@ -2185,12 +2204,13 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 modal-backdrop flex items-center justify-center"
-      onClick={onClose}
+      className={`fixed inset-0 z-50 modal-backdrop flex items-center justify-center ${isClosing ? 'modal-backdrop-exit' : ''}`}
+      onClick={() => setIsClosing(true)}
     >
       <div
-        className="flex w-[900px] h-[80vh] rounded-2xl dark:border-claude-darkBorder border-claude-border border shadow-modal overflow-hidden modal-content"
+        className={`flex w-[900px] h-[80vh] rounded-2xl dark:border-claude-darkBorder border-claude-border border shadow-modal overflow-hidden glass-panel relative ${isClosing ? 'modal-content-exit' : 'modal-content'}`}
         onClick={handleSettingsClick}
+        onAnimationEnd={() => { if (isClosing) onClose(); }}
       >
         {/* Left sidebar */}
         <div className="w-[220px] shrink-0 flex flex-col dark:bg-claude-darkSurfaceMuted bg-claude-surfaceMuted border-r dark:border-claude-darkBorder border-claude-border rounded-l-2xl overflow-y-auto">
@@ -2221,7 +2241,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
           <div className="flex justify-between items-center px-6 pt-5 pb-3 shrink-0">
             <h3 className="text-lg font-semibold dark:text-claude-darkText text-claude-text">{activeTabLabel}</h3>
             <button
-              onClick={onClose}
+              onClick={() => setIsClosing(true)}
               className="dark:text-claude-darkTextSecondary text-claude-textSecondary dark:hover:text-claude-darkText hover:text-claude-text p-1.5 dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover rounded-lg transition-colors"
             >
               <XMarkIcon className="h-5 w-5" />
@@ -2259,7 +2279,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose, initialTab, notice }) => {
             <div className="flex justify-end space-x-4 p-4 dark:border-claude-darkBorder border-claude-border border-t dark:bg-claude-darkBg bg-claude-bg shrink-0">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => setIsClosing(true)}
                 className="px-4 py-2 dark:text-claude-darkText text-claude-text dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover rounded-xl transition-colors text-sm font-medium border dark:border-claude-darkBorder border-claude-border active:scale-[0.98]"
               >
                 {i18nService.t('cancel')}

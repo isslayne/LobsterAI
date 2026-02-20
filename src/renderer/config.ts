@@ -141,6 +141,8 @@ export interface AppConfig {
   };
   // 主题配置
   theme: 'light' | 'dark' | 'system';
+  // 主题风格
+  themeStyle: 'classic' | 'tahoe';
   // 语言配置
   language: 'zh' | 'en';
   // 语言初始化标记 (用于判断是否是首次启动)
@@ -277,6 +279,7 @@ export const defaultConfig: AppConfig = {
     }
   },
   theme: 'system',
+  themeStyle: 'classic',
   language: 'zh',
   app: {
     port: 3000,

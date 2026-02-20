@@ -492,8 +492,8 @@ const App: React.FC = () => {
           onToggleCollapse={handleToggleSidebar}
           updateBadge={!isSidebarCollapsed ? updateBadge : null}
         />
-        <div className={`flex-1 min-w-0 py-1.5 pr-1.5 ${isSidebarCollapsed ? 'pl-1.5' : ''}`}>
-          <div className="h-full rounded-xl dark:bg-claude-darkBg bg-claude-bg overflow-hidden">
+        <div className="flex-1 min-w-0">
+          <div className="h-full dark:bg-claude-darkBg bg-claude-bg overflow-hidden">
             {mainView === 'skills' ? (
               <SkillsView
                 isSidebarCollapsed={isSidebarCollapsed}

@@ -234,8 +234,8 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
   };
 
   const containerClass = isLarge
-    ? 'relative rounded-2xl border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkSurface bg-claude-surface shadow-card focus-within:shadow-elevated focus-within:ring-1 focus-within:ring-claude-accent/40 focus-within:border-claude-accent'
-    : 'relative flex items-end gap-2 p-3 rounded-xl border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkSurface bg-claude-surface';
+    ? 'relative rounded-2xl border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkSurface bg-claude-surface shadow-card focus-within:shadow-elevated focus-within:ring-1 focus-within:ring-claude-accent/40 focus-within:border-claude-accent glass-panel'
+    : 'relative flex items-end gap-2 p-3 rounded-xl border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkSurface bg-claude-surface glass-panel';
 
   const textareaClass = isLarge
     ? `w-full resize-none bg-transparent px-4 pt-2.5 pb-2 dark:text-claude-darkText text-claude-text placeholder:dark:text-claude-darkTextSecondary/60 placeholder:text-claude-textSecondary/60 focus:outline-none text-[15px] leading-6 min-h-[${minHeight}px] max-h-[${maxHeight}px]`
@@ -454,36 +454,6 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
             />
             <div className="flex items-center justify-between px-4 pb-2 pt-1.5">
               <div className="flex items-center gap-2 relative">
-                {showFolderSelector && (
-                  <>
-                    <div className="relative group">
-                      <button
-                        ref={folderButtonRef as React.RefObject<HTMLButtonElement>}
-                        type="button"
-                        onClick={() => setShowFolderMenu(!showFolderMenu)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm dark:text-claude-darkTextSecondary text-claude-textSecondary dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover dark:hover:text-claude-darkText hover:text-claude-text transition-colors"
-                      >
-                        <FolderIcon className="h-4 w-4" />
-                        <span className="max-w-[150px] truncate text-xs">
-                          {truncatePath(workingDirectory)}
-                        </span>
-                      </button>
-                      {/* Tooltip - hidden when folder menu is open */}
-                      {!showFolderMenu && (
-                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3.5 py-2.5 text-[13px] leading-relaxed rounded-xl shadow-xl dark:bg-claude-darkBg bg-claude-bg dark:text-claude-darkText text-claude-text dark:border-claude-darkBorder border-claude-border border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-50 max-w-[400px] break-all whitespace-nowrap">
-                          {truncatePath(workingDirectory, 120)}
-                        </div>
-                      )}
-                    </div>
-                    <FolderSelectorPopover
-                      isOpen={showFolderMenu}
-                      onClose={() => setShowFolderMenu(false)}
-                      onSelectFolder={handleFolderSelect}
-                      anchorRef={folderButtonRef as React.RefObject<HTMLElement>}
-                    />
-                  </>
-                )}
-                {showModelSelector && <ModelSelector dropdownDirection="up" />}
                 <button
                   type="button"
                   onClick={handleAddFile}
@@ -499,8 +469,37 @@ const CoworkPromptInput = React.forwardRef<CoworkPromptInputRef, CoworkPromptInp
                   onManageSkills={handleManageSkills}
                 />
                 <ActiveSkillBadge />
+                {showFolderSelector && (
+                  <>
+                    <div className="relative group">
+                      <button
+                        ref={folderButtonRef as React.RefObject<HTMLButtonElement>}
+                        type="button"
+                        onClick={() => setShowFolderMenu(!showFolderMenu)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm dark:text-claude-darkTextSecondary text-claude-textSecondary dark:hover:bg-claude-darkSurfaceHover hover:bg-claude-surfaceHover dark:hover:text-claude-darkText hover:text-claude-text transition-colors"
+                      >
+                        <FolderIcon className="h-4 w-4" />
+                        <span className="max-w-[150px] truncate text-xs">
+                          {truncatePath(workingDirectory)}
+                        </span>
+                      </button>
+                      {!showFolderMenu && (
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3.5 py-2.5 text-[13px] leading-relaxed rounded-xl shadow-xl dark:bg-claude-darkBg bg-claude-bg dark:text-claude-darkText text-claude-text dark:border-claude-darkBorder border-claude-border border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-50 max-w-[400px] break-all whitespace-nowrap">
+                          {truncatePath(workingDirectory, 120)}
+                        </div>
+                      )}
+                    </div>
+                    <FolderSelectorPopover
+                      isOpen={showFolderMenu}
+                      onClose={() => setShowFolderMenu(false)}
+                      onSelectFolder={handleFolderSelect}
+                      anchorRef={folderButtonRef as React.RefObject<HTMLElement>}
+                    />
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-2">
+                {showModelSelector && <ModelSelector dropdownDirection="up" />}
                 {isStreaming ? (
                   <button
                     type="button"

@@ -68,7 +68,7 @@ const ThemedSelect: React.FC<ThemedSelectProps> = ({
           {isOpen && (
             <div className="absolute z-10 w-full mt-1 overflow-auto rounded-md popover-enter shadow-popover max-h-60 focus:outline-none">
               <ul
-                className="py-1 overflow-auto text-sm dark:bg-claude-darkSurface bg-claude-surface border dark:border-claude-darkBorder border-claude-border rounded-lg"
+                className="relative py-1 overflow-auto text-sm dark:bg-claude-darkSurface bg-claude-surface border dark:border-claude-darkBorder border-claude-border rounded-lg glass-panel"
                 role="listbox"
                 aria-labelledby={id}
               >

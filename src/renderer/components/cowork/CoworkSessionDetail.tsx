@@ -1053,7 +1053,11 @@ const AssistantTurnBlock: React.FC<{
     <div className="px-4 py-2">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0 px-4 py-3 space-y-3">
+          {/* AI Avatar */}
+          <div className="shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-claude-accent to-purple-500 flex items-center justify-center mt-1">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-white"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2" /><path d="M20 14h2" /><path d="M15 13v2" /><path d="M9 13v2" /></svg>
+          </div>
+          <div className="flex-1 min-w-0 relative rounded-2xl border dark:border-claude-darkBorder border-claude-border dark:bg-claude-darkSurface bg-claude-surface px-4 py-3 space-y-3 glass-panel">
             {visibleAssistantItems.map((item, index) => {
               if (item.type === 'assistant') {
                 if (item.message.metadata?.isThinking) {

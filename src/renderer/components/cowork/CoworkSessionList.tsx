@@ -53,18 +53,23 @@ const CoworkSessionList: React.FC<CoworkSessionListProps> = ({
   }
 
   return (
-    <div className="space-y-2">
-      {sortedSessions.map((session) => (
-        <CoworkSessionItem
+    <div className="space-y-0.5">
+      {sortedSessions.map((session, index) => (
+        <div
           key={session.id}
-          session={session}
-          hasUnread={unreadSessionIdSet.has(session.id)}
-          isActive={session.id === currentSessionId}
-          onSelect={() => onSelectSession(session.id)}
-          onDelete={() => onDeleteSession(session.id)}
-          onTogglePin={(pinned) => onTogglePin(session.id, pinned)}
-          onRename={(title) => onRenameSession(session.id, title)}
-        />
+          className="session-item"
+          style={{ '--stagger-index': Math.min(index, 9) } as React.CSSProperties}
+        >
+          <CoworkSessionItem
+            session={session}
+            hasUnread={unreadSessionIdSet.has(session.id)}
+            isActive={session.id === currentSessionId}
+            onSelect={() => onSelectSession(session.id)}
+            onDelete={() => onDeleteSession(session.id)}
+            onTogglePin={(pinned) => onTogglePin(session.id, pinned)}
+            onRename={(title) => onRenameSession(session.id, title)}
+          />
+        </div>
       ))}
     </div>
   );

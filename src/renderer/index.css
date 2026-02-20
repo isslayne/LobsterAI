@@ -247,3 +247,232 @@ select::-ms-expand {
   0% { left: -40%; }
   100% { left: 100%; }
 }
+
+/* ========================================
+   Tahoe Glassmorphism Theme
+   ======================================== */
+
+/* --- Color Token Overrides (RGB channels for Tailwind opacity modifier support) --- */
+.tahoe.dark {
+  /* Solid RGB channels — Tailwind classes auto-compose with /opacity */
+  --claude-darkBg-rgb: 12 14 24;
+  --claude-darkSurface-rgb: 22 26 40;
+  --claude-darkSurfaceHover-rgb: 30 34 54;
+  --claude-darkSurfaceMuted-rgb: 14 16 26;
+  --claude-darkSurfaceInset-rgb: 8 10 18;
+  --claude-darkBorder-rgb: 30 34 50;
+  --claude-darkBorderLight-rgb: 24 28 40;
+  --claude-darkText-rgb: 232 234 240;
+  --claude-darkTextSecondary-rgb: 139 144 168;
+  --claude-accentMuted: rgba(59, 130, 246, 0.094);
+
+  /* Tahoe-specific design tokens (full RGBA for glass effects) */
+  --glass-bg: rgba(22, 26, 40, 0.4);
+  --glass-bg-strong: rgba(22, 26, 40, 0.6);
+  --glass-bg-subtle: rgba(22, 26, 40, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.063);
+  --glass-border-top: rgba(255, 255, 255, 0.094);
+  --glass-noise: rgba(255, 255, 255, 0.012);
+  --glass-input-bg: #0C0F1A;
+  --glass-accent-glow: rgba(59, 130, 246, 0.25);
+  --tahoe-text-tertiary: #555A70;
+
+  color-scheme: dark;
+  background-color: #0C0E18;
+  color: #E8EAF0;
+}
+
+.tahoe.dark #root,
+.tahoe.dark .App,
+.tahoe.dark main {
+  background-color: #0C0E18;
+  color: #E8EAF0;
+}
+
+/* --- Glass Semantic Utility Classes --- */
+/* These are no-ops outside .tahoe.dark */
+
+.tahoe.dark .glass-panel {
+  position: relative;
+  background-color: var(--glass-bg-strong);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-color: var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  border-left-color: var(--glass-border-top);
+}
+
+.tahoe.dark .glass-surface {
+  position: relative;
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-color: var(--glass-border);
+}
+
+.tahoe.dark .glass-subtle {
+  background-color: var(--glass-bg-subtle);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.tahoe.dark .glass-sidebar {
+  position: relative;
+  background-color: rgba(14, 16, 26, 0.8);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-right: 1px solid var(--glass-border);
+}
+
+/* Noise overlay pseudo-element for glass surfaces */
+.tahoe.dark .glass-panel::after,
+.tahoe.dark .glass-surface::after,
+.tahoe.dark .glass-sidebar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-noise);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure glass children render above noise layer */
+.tahoe.dark .glass-panel > *,
+.tahoe.dark .glass-surface > *,
+.tahoe.dark .glass-sidebar > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Interactive Elements Base Transition --- */
+.tahoe.dark button,
+.tahoe.dark a,
+.tahoe.dark input,
+.tahoe.dark textarea,
+.tahoe.dark select,
+.tahoe.dark [role='button'],
+.tahoe.dark [role='tab'] {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Override Tailwind transition-colors to include transform for Tahoe micro-interactions */
+.tahoe.dark .transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, transform, box-shadow;
+}
+
+/* Button micro-interactions */
+.tahoe.dark button:hover,
+.tahoe.dark [role='button']:hover {
+  transform: translateY(-1px);
+}
+
+.tahoe.dark button:active,
+.tahoe.dark [role='button']:active {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+
+/* --- Prose/Typography overrides --- */
+.tahoe.dark .prose {
+  --tw-prose-body: #E8EAF0;
+  --tw-prose-headings: #E8EAF0;
+  --tw-prose-links: #60A5FA;
+  --tw-prose-code: #E8EAF0;
+  --tw-prose-pre-bg: #080A12;
+  --tw-prose-pre-code: #E8EAF0;
+  --tw-prose-quotes: #8B90A8;
+  --tw-prose-quote-borders: #3B82F6;
+  --tw-prose-bold: #E8EAF0;
+}
+
+/* Code blocks */
+.tahoe.dark pre {
+  background-color: #080A12;
+}
+
+/* Scrollbar */
+.tahoe.dark ::-webkit-scrollbar-thumb {
+  background: #FFFFFF15;
+}
+.tahoe.dark ::-webkit-scrollbar-thumb:hover {
+  background: #FFFFFF25;
+}
+
+/* Input fields */
+.tahoe.dark input,
+.tahoe.dark textarea,
+.tahoe.dark select {
+  background-color: var(--glass-input-bg);
+}
+
+/* --- Tahoe Sidebar transition --- */
+.tahoe.dark .sidebar-transition {
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- Tahoe Modal overrides --- */
+.tahoe.dark .modal-backdrop {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.tahoe.dark .modal-content {
+  animation: modal-enter 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Modal exit keyframes (defined here so they're always available, not relying on Tailwind JIT) */
+@keyframes modal-exit {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.95); }
+}
+
+@keyframes fade-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Modal exit animations */
+.modal-backdrop-exit {
+  animation: fade-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.modal-content-exit {
+  animation: modal-exit 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* --- Tahoe Popover --- */
+.tahoe.dark .popover-enter {
+  animation: popover-enter 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- Tahoe List stagger animation --- */
+.tahoe.dark .session-item {
+  animation: list-stagger 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--stagger-index, 0) * 30ms);
+}
+
+/* --- Tahoe Welcome logo glow --- */
+.tahoe.dark .welcome-logo {
+  filter: drop-shadow(0 0 20px var(--glass-accent-glow));
+}
+
+/* --- Tahoe Quick action card glass --- */
+.tahoe.dark .quick-action-card {
+  background: var(--glass-bg-subtle);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* --- Reduced motion --- */
+@media (prefers-reduced-motion: reduce) {
+  .tahoe.dark *,
+  .tahoe.dark *::before,
+  .tahoe.dark *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
